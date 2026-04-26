@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Search as SearchIcon,
   Loader2,
@@ -35,6 +35,7 @@ const getLiked = (): Set<string> => {
 
 const Search = () => {
   const loc = useLocation();
+  const navigate = useNavigate();
   const q = new URLSearchParams(loc.search).get("q") || "";
   const [results, setResults] = useState<Track[]>([]);
   const [loading, setLoading] = useState(false);
@@ -326,7 +327,7 @@ const Search = () => {
             {SUGGESTIONS.map((s) => (
               <button
                 key={s}
-                onClick={() => setQ(s)}
+                onClick={() => navigate(`/search?q=${encodeURIComponent(s)}`)}
                 className="px-3 py-1.5 rounded-full bg-secondary hover:bg-secondary/80 text-sm transition-colors"
               >
                 {s}
