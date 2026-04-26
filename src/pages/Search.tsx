@@ -43,8 +43,12 @@ import {
   isDownloaded,
   downloadTrack,
   removeDownload,
+  getDownloadedBlob,
+  DownloadCancelledError,
 } from "@/lib/offline-store";
 import { toast } from "sonner";
+import { Progress } from "@/components/ui/progress";
+import { X, WifiOff } from "lucide-react";
 
 const SUGGESTIONS = ["Daylight", "Arijit Singh", "Coldplay", "Lo-fi", "Taylor Swift", "Khuda Jaane"];
 const TABS = [
