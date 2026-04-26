@@ -71,10 +71,19 @@ export async function getDownloadedBlob(id: string): Promise<Blob | null> {
 /**
  * Download an Audius track's audio and persist it.
  * YouTube tracks throw — we don't cache them due to ToS.
+ * Pass an AbortSignal to support user-initiated cancellation.
  */
+export class DownloadCancelledError extends Error {
+  constructor() {
+    super("Download cancelled");
+    this.name = "DownloadCancelledError";
+  }
+}
+
 export async function downloadTrack(
   track: Track,
   onProgress?: (loaded: number, total: number) => void,
+  signal?: AbortSignal,
 ): Promise<void> {
   if (track.source === "youtube") {
     throw new Error(
@@ -92,21 +101,30 @@ export async function downloadTrack(
     throw new Error("Unsupported audio protocol.");
   }
 
-  const res = await fetch(url.toString());
+  const res = await fetch(url.toString(), { signal });
   if (!res.ok || !res.body) throw new Error(`Download failed (${res.status})`);
 
   const total = Number(res.headers.get("Content-Length") || 0);
   const reader = res.body.getReader();
   const chunks: Uint8Array[] = [];
   let loaded = 0;
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    if (value) {
-      chunks.push(value);
-      loaded += value.byteLength;
-      onProgress?.(loaded, total);
+  try {
+    while (true) {
+      if (signal?.aborted) {
+        await reader.cancel();
+        throw new DownloadCancelledError();
+      }
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (value) {
+        chunks.push(value);
+        loaded += value.byteLength;
+        onProgress?.(loaded, total);
+      }
     }
+  } catch (e) {
+    if ((e as Error)?.name === "AbortError") throw new DownloadCancelledError();
+    throw e;
   }
   const blob = new Blob(chunks as BlobPart[], { type: "audio/mpeg" });
 
