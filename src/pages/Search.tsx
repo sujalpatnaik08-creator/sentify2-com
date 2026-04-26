@@ -442,10 +442,10 @@ const Search = () => {
             <span className="text-muted-foreground">{lastDuration}ms</span>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            <DebugStat icon={<Youtube className="w-3.5 h-3.5 text-red-500" />} label="YouTube tracks" value={ytCount} />
-            <DebugStat icon={<Radio className="w-3.5 h-3.5 text-purple-400" />} label="Audius tracks" value={auCount} />
-            <DebugStat icon={<User className="w-3.5 h-3.5 text-blue-400" />} label="Artists" value={artists.length} />
-            <DebugStat icon={<ListMusic className="w-3.5 h-3.5 text-amber-400" />} label="Playlists" value={playlists.length} />
+            <DebugStat icon={<Youtube className="w-3.5 h-3.5 text-destructive" />} label="YouTube tracks" value={ytCount} />
+            <DebugStat icon={<Radio className="w-3.5 h-3.5 text-primary" />} label="Audius tracks" value={auCount} />
+            <DebugStat icon={<User className="w-3.5 h-3.5 text-foreground" />} label="Artists" value={artists.length} />
+            <DebugStat icon={<ListMusic className="w-3.5 h-3.5 text-muted-foreground" />} label="Playlists" value={playlists.length} />
           </div>
           <div className="pt-1 flex items-center gap-2 text-muted-foreground">
             <CheckCircle2 className={cn("w-3.5 h-3.5", error ? "text-destructive" : "text-primary")} />
