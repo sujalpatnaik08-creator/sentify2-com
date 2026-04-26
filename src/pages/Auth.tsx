@@ -8,6 +8,7 @@ import { Navigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Loader2, Mail, Music2 } from "lucide-react";
 import { HeroOrb } from "@/components/HeroOrb";
+import { lovable } from "@/integrations/lovable";
 
 const Auth = () => {
   const { session, loading } = useAuth();
@@ -50,11 +51,10 @@ const Auth = () => {
   };
 
   const googleSignIn = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: window.location.origin },
+    const result = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin,
     });
-    if (error) toast.error(error.message);
+    if (result.error) toast.error(result.error.message);
   };
 
   return (
