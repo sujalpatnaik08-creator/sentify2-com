@@ -14,6 +14,10 @@ import {
   User,
   Disc3,
   Music2,
+  Bug,
+  Youtube,
+  Radio,
+  CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +25,7 @@ import { searchAll, detectLanguage, type ArtistResult, type PlaylistResult, type
 import type { Track } from "@/types/music";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { cn } from "@/lib/utils";
+import { getLikedTracks, toggleLikedTrack } from "@/lib/user-prefs";
 
 const SUGGESTIONS = ["Daylight", "Arijit Singh", "Coldplay", "Lo-fi", "Taylor Swift", "Khuda Jaane"];
 const TABS = [
@@ -59,10 +64,8 @@ const fmt = (s: number) => {
   return `${m.toString().padStart(2, "0")}:${sec.toString().padStart(2, "0")}`;
 };
 
-const LIKED_KEY = "sentify_liked";
-const getLiked = (): Set<string> => {
-  try { return new Set(JSON.parse(localStorage.getItem(LIKED_KEY) || "[]")); } catch { return new Set(); }
-};
+const initialLikedSet = (): Set<string> =>
+  new Set(getLikedTracks().map((t) => t.id));
 
 const Search = () => {
   const loc = useLocation();
@@ -76,7 +79,9 @@ const Search = () => {
   const [attempt, setAttempt] = useState(0);
   const [tab, setTab] = useState<Tab>("all");
   const [langFilter, setLangFilter] = useState<Language | "all">("all");
-  const [liked, setLiked] = useState<Set<string>>(getLiked);
+  const [liked, setLiked] = useState<Set<string>>(initialLikedSet);
+  const [showDebug, setShowDebug] = useState(false);
+  const [lastDuration, setLastDuration] = useState<number>(0);
 
   const { current, isPlaying, playTrack, togglePlay } = usePlayer();
 
@@ -87,6 +92,7 @@ const Search = () => {
     }
     setLoading(true);
     setError(null);
+    const t0 = performance.now();
     try {
       const data = await searchAll(query, 40);
       setTracks(data.tracks);
@@ -96,6 +102,7 @@ const Search = () => {
       setTracks([]); setArtists([]); setPlaylists([]);
       setError(err instanceof Error ? err.message : "Something went wrong while searching.");
     } finally {
+      setLastDuration(Math.round(performance.now() - t0));
       setLoading(false);
     }
   }, []);
@@ -108,12 +115,10 @@ const Search = () => {
   const retry = () => setAttempt((n) => n + 1);
 
   const toggleLike = (id: string) => {
-    setLiked((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      localStorage.setItem(LIKED_KEY, JSON.stringify([...next]));
-      return next;
-    });
+    const track = tracks.find((t) => t.id === id);
+    if (!track) return;
+    toggleLikedTrack(track);
+    setLiked(initialLikedSet());
   };
 
   // Language-filtered tracks
