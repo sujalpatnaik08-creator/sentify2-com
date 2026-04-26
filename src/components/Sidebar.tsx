@@ -8,9 +8,9 @@ import {
   Disc3,
   Mic2,
   History,
-  Headphones,
   LogOut,
   PlayCircle,
+  Heart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -25,12 +25,11 @@ const main: Item[] = [
 ];
 
 const yourMusic: Item[] = [
-  { to: "/library", icon: Music, label: "Songs" },
+  { to: "/library?tab=liked", icon: Heart, label: "Liked Songs" },
   { to: "/library?tab=playlists", icon: ListMusic, label: "Playlists" },
   { to: "/library?tab=albums", icon: Disc3, label: "Albums" },
   { to: "/library?tab=artists", icon: Mic2, label: "Artists" },
   { to: "/library?tab=history", icon: History, label: "History" },
-  { to: "/library?tab=podcasts", icon: Headphones, label: "Podcasts" },
 ];
 
 export const Sidebar = () => {
@@ -38,10 +37,7 @@ export const Sidebar = () => {
   const { user, signOut } = useAuth();
 
   const renderItem = (it: Item) => {
-    const active =
-      loc.pathname + loc.search === it.to ||
-      (it.to === "/" && loc.pathname === "/" && loc.search === "") ||
-      (it.to !== "/" && loc.pathname === it.to.split("?")[0] && !it.to.includes("?") && !loc.search);
+    const active = loc.pathname + loc.search === it.to;
     return (
       <Link
         key={it.to}

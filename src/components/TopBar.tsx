@@ -2,6 +2,7 @@ import { Search as SearchIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { addSearchHistory } from "@/lib/user-prefs";
 
 export const TopBar = () => {
   const navigate = useNavigate();
@@ -15,6 +16,13 @@ export const TopBar = () => {
       setQ(params.get("q") || "");
     }
   }, [loc.pathname, loc.search]);
+
+  // Persist completed queries to history (debounced)
+  useEffect(() => {
+    if (!q.trim() || q.trim().length < 2) return;
+    const id = setTimeout(() => addSearchHistory(q), 1200);
+    return () => clearTimeout(id);
+  }, [q]);
 
   const onChange = (val: string) => {
     setQ(val);

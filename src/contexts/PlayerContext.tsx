@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState, ReactNode, useCallback } from "react";
 import type { Track } from "@/types/music";
+import { addRecentlyPlayed, isValidYouTubeId } from "@/lib/user-prefs";
 
 interface PlayerContextValue {
   current: Track | null;
@@ -103,7 +104,15 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       ytPlayerRef.current = new window.YT.Player("sentify-yt-player", {
         height: "0",
         width: "0",
-        playerVars: { autoplay: 0, controls: 0, playsinline: 1 },
+        host: "https://www.youtube-nocookie.com",
+        playerVars: {
+          autoplay: 0,
+          controls: 0,
+          playsinline: 1,
+          modestbranding: 1,
+          rel: 0,
+          origin: window.location.origin,
+        },
         events: {
           onReady: () => {
             ytReadyRef.current = true;
@@ -174,11 +183,18 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       setCurrent(track);
       setProgress(0);
       setDuration(track.duration || 0);
+      try { addRecentlyPlayed(track); } catch { /* storage may be unavailable */ }
       if (newQueue) {
         const idx = newQueue.findIndex((t) => t.id === track.id);
         setQueue(newQueue.slice(idx + 1));
       }
       if (track.source === "youtube") {
+        // Strict validation: only accept canonical 11-char YouTube IDs.
+        // Prevents injection of arbitrary URLs into the IFrame loader.
+        if (!isValidYouTubeId(track.audioUrl)) {
+          console.warn("Refusing to play invalid YouTube ID:", track.audioUrl);
+          return;
+        }
         const start = () => {
           try {
             ytPlayerRef.current.loadVideoById(track.audioUrl);
@@ -191,6 +207,11 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       } else {
         const audio = audioRef.current;
         if (!audio) return;
+        // Only allow http(s) audio sources.
+        try {
+          const url = new URL(track.audioUrl);
+          if (url.protocol !== "https:" && url.protocol !== "http:") return;
+        } catch { return; }
         audio.src = track.audioUrl;
         audio.play().catch((e) => console.warn("Playback failed", e));
       }

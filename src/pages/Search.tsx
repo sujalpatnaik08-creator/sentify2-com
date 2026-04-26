@@ -14,6 +14,10 @@ import {
   User,
   Disc3,
   Music2,
+  Bug,
+  Youtube,
+  Radio,
+  CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +25,7 @@ import { searchAll, detectLanguage, type ArtistResult, type PlaylistResult, type
 import type { Track } from "@/types/music";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { cn } from "@/lib/utils";
+import { getLikedTracks, toggleLikedTrack } from "@/lib/user-prefs";
 
 const SUGGESTIONS = ["Daylight", "Arijit Singh", "Coldplay", "Lo-fi", "Taylor Swift", "Khuda Jaane"];
 const TABS = [
@@ -59,10 +64,8 @@ const fmt = (s: number) => {
   return `${m.toString().padStart(2, "0")}:${sec.toString().padStart(2, "0")}`;
 };
 
-const LIKED_KEY = "sentify_liked";
-const getLiked = (): Set<string> => {
-  try { return new Set(JSON.parse(localStorage.getItem(LIKED_KEY) || "[]")); } catch { return new Set(); }
-};
+const initialLikedSet = (): Set<string> =>
+  new Set(getLikedTracks().map((t) => t.id));
 
 const Search = () => {
   const loc = useLocation();
@@ -76,7 +79,9 @@ const Search = () => {
   const [attempt, setAttempt] = useState(0);
   const [tab, setTab] = useState<Tab>("all");
   const [langFilter, setLangFilter] = useState<Language | "all">("all");
-  const [liked, setLiked] = useState<Set<string>>(getLiked);
+  const [liked, setLiked] = useState<Set<string>>(initialLikedSet);
+  const [showDebug, setShowDebug] = useState(false);
+  const [lastDuration, setLastDuration] = useState<number>(0);
 
   const { current, isPlaying, playTrack, togglePlay } = usePlayer();
 
@@ -87,6 +92,7 @@ const Search = () => {
     }
     setLoading(true);
     setError(null);
+    const t0 = performance.now();
     try {
       const data = await searchAll(query, 40);
       setTracks(data.tracks);
@@ -96,6 +102,7 @@ const Search = () => {
       setTracks([]); setArtists([]); setPlaylists([]);
       setError(err instanceof Error ? err.message : "Something went wrong while searching.");
     } finally {
+      setLastDuration(Math.round(performance.now() - t0));
       setLoading(false);
     }
   }, []);
@@ -108,12 +115,10 @@ const Search = () => {
   const retry = () => setAttempt((n) => n + 1);
 
   const toggleLike = (id: string) => {
-    setLiked((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      localStorage.setItem(LIKED_KEY, JSON.stringify([...next]));
-      return next;
-    });
+    const track = tracks.find((t) => t.id === id);
+    if (!track) return;
+    toggleLikedTrack(track);
+    setLiked(initialLikedSet());
   };
 
   // Language-filtered tracks
@@ -399,8 +404,60 @@ const Search = () => {
     );
   };
 
+  // ---- Troubleshooting derived counts ----
+  const ytCount = tracks.filter((t) => t.source === "youtube").length;
+  const auCount = tracks.filter((t) => t.source === "audius").length;
+  const currentSource = current?.source ?? null;
+
   return (
     <div className="px-6 md:px-10 py-8 max-w-7xl mx-auto">
+      {/* Header row with troubleshooting toggle */}
+      {q && (
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <p className="text-xs text-muted-foreground truncate">
+            {loading ? "Searching…" : `Results for "${q}"`}
+          </p>
+          <button
+            onClick={() => setShowDebug((v) => !v)}
+            className={cn(
+              "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition-colors",
+              showDebug
+                ? "bg-primary/15 text-primary border-primary/40"
+                : "bg-secondary/60 text-muted-foreground border-border hover:text-foreground"
+            )}
+            aria-pressed={showDebug}
+          >
+            <Bug className="w-3.5 h-3.5" />
+            Troubleshoot
+          </button>
+        </div>
+      )}
+
+      {q && showDebug && (
+        <div className="mb-4 p-4 rounded-lg border border-border/60 bg-card/40 text-xs space-y-2 animate-fade-in">
+          <div className="flex items-center justify-between">
+            <span className="font-semibold text-sm flex items-center gap-1.5">
+              <Bug className="w-4 h-4 text-primary" /> Music source diagnostics
+            </span>
+            <span className="text-muted-foreground">{lastDuration}ms</span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <DebugStat icon={<Youtube className="w-3.5 h-3.5 text-destructive" />} label="YouTube tracks" value={ytCount} />
+            <DebugStat icon={<Radio className="w-3.5 h-3.5 text-primary" />} label="Audius tracks" value={auCount} />
+            <DebugStat icon={<User className="w-3.5 h-3.5 text-foreground" />} label="Artists" value={artists.length} />
+            <DebugStat icon={<ListMusic className="w-3.5 h-3.5 text-muted-foreground" />} label="Playlists" value={playlists.length} />
+          </div>
+          <div className="pt-1 flex items-center gap-2 text-muted-foreground">
+            <CheckCircle2 className={cn("w-3.5 h-3.5", error ? "text-destructive" : "text-primary")} />
+            <span>
+              {error
+                ? `Error: ${error}`
+                : `Now playing source: ${currentSource ? currentSource.toUpperCase() : "—"}`}
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Filter chips */}
       {q && (tracks.length > 0 || artists.length > 0 || playlists.length > 0) && (
         <>
@@ -530,5 +587,15 @@ const Search = () => {
     </div>
   );
 };
+
+const DebugStat = ({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) => (
+  <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-secondary/60 border border-border/50">
+    {icon}
+    <div className="min-w-0">
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground truncate">{label}</div>
+      <div className="text-sm font-semibold tabular-nums">{value}</div>
+    </div>
+  </div>
+);
 
 export default Search;
