@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Search as SearchIcon,
@@ -10,16 +10,47 @@ import {
   Clock,
   Play,
   Pause,
+  ListMusic,
+  User,
+  Disc3,
+  Music2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { searchTracks } from "@/lib/music-api";
+import { Badge } from "@/components/ui/badge";
+import { searchAll, detectLanguage, type ArtistResult, type PlaylistResult, type Language } from "@/lib/music-api";
 import type { Track } from "@/types/music";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { cn } from "@/lib/utils";
 
 const SUGGESTIONS = ["Daylight", "Arijit Singh", "Coldplay", "Lo-fi", "Taylor Swift", "Khuda Jaane"];
-const TABS = ["Top Results", "Tracks", "Artists", "Albums"] as const;
-type Tab = (typeof TABS)[number];
+const TABS = [
+  { id: "all", label: "All", icon: Music2 },
+  { id: "songs", label: "Songs", icon: Music2 },
+  { id: "artists", label: "Artists", icon: User },
+  { id: "albums", label: "Albums", icon: Disc3 },
+  { id: "playlists", label: "Playlists", icon: ListMusic },
+] as const;
+type Tab = (typeof TABS)[number]["id"];
+
+const LANG_LABEL: Record<Language, string> = {
+  hindi: "Hindi",
+  english: "English",
+  spanish: "Spanish",
+  korean: "Korean",
+  japanese: "Japanese",
+  arabic: "Arabic",
+  other: "Other",
+};
+
+const LANG_COLORS: Record<Language, string> = {
+  hindi: "bg-amber-500/15 text-amber-400 border-amber-500/30",
+  english: "bg-blue-500/15 text-blue-400 border-blue-500/30",
+  spanish: "bg-rose-500/15 text-rose-400 border-rose-500/30",
+  korean: "bg-purple-500/15 text-purple-400 border-purple-500/30",
+  japanese: "bg-pink-500/15 text-pink-400 border-pink-500/30",
+  arabic: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
+  other: "bg-secondary text-muted-foreground border-border",
+};
 
 const fmt = (s: number) => {
   if (!s || !isFinite(s)) return "--:--";
@@ -37,28 +68,32 @@ const Search = () => {
   const loc = useLocation();
   const navigate = useNavigate();
   const q = new URLSearchParams(loc.search).get("q") || "";
-  const [results, setResults] = useState<Track[]>([]);
+  const [tracks, setTracks] = useState<Track[]>([]);
+  const [artists, setArtists] = useState<ArtistResult[]>([]);
+  const [playlists, setPlaylists] = useState<PlaylistResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
-  const [tab, setTab] = useState<Tab>("Tracks");
+  const [tab, setTab] = useState<Tab>("all");
+  const [langFilter, setLangFilter] = useState<Language | "all">("all");
   const [liked, setLiked] = useState<Set<string>>(getLiked);
 
   const { current, isPlaying, playTrack, togglePlay } = usePlayer();
 
   const runSearch = useCallback(async (query: string) => {
     if (!query.trim()) {
-      setResults([]);
-      setError(null);
+      setTracks([]); setArtists([]); setPlaylists([]); setError(null);
       return;
     }
     setLoading(true);
     setError(null);
     try {
-      const data = await searchTracks(query, 40);
-      setResults(data);
+      const data = await searchAll(query, 40);
+      setTracks(data.tracks);
+      setArtists(data.artists);
+      setPlaylists(data.playlists);
     } catch (err) {
-      setResults([]);
+      setTracks([]); setArtists([]); setPlaylists([]);
       setError(err instanceof Error ? err.message : "Something went wrong while searching.");
     } finally {
       setLoading(false);
@@ -81,34 +116,32 @@ const Search = () => {
     });
   };
 
-  // Derive artists/albums from track results
-  const artists = useMemo(() => {
-    const map = new Map<string, { name: string; artwork: string; count: number }>();
-    for (const t of results) {
-      const key = t.artist;
-      if (!map.has(key)) map.set(key, { name: key, artwork: t.artwork, count: 0 });
-      map.get(key)!.count++;
-    }
-    return [...map.values()].sort((a, b) => b.count - a.count);
-  }, [results]);
+  // Language-filtered tracks
+  const filteredTracks =
+    langFilter === "all"
+      ? tracks
+      : tracks.filter((t) => detectLanguage(`${t.title} ${t.artist}`) === langFilter);
 
-  const albums = useMemo(() => {
+  // Albums derived from tracks (group by album when present, else by artist)
+  const albums = (() => {
     const map = new Map<string, { name: string; artist: string; artwork: string; count: number }>();
-    for (const t of results) {
+    for (const t of filteredTracks) {
       const name = t.album?.trim() || t.title;
       const key = `${name}|${t.artist}`;
       if (!map.has(key)) map.set(key, { name, artist: t.artist, artwork: t.artwork, count: 0 });
       map.get(key)!.count++;
     }
     return [...map.values()].sort((a, b) => b.count - a.count);
-  }, [results]);
+  })();
 
   const handleRowPlay = (t: Track) => {
     if (current?.id === t.id) togglePlay();
-    else playTrack(t, results);
+    else playTrack(t, filteredTracks);
   };
 
-  const renderTracksTable = (tracks: Track[]) => (
+  // ---- Renderers ----
+
+  const renderTracksTable = (list: Track[]) => (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
@@ -116,15 +149,16 @@ const Search = () => {
             <th className="font-normal py-3 pl-3 pr-2 w-12">#</th>
             <th className="font-normal py-3 px-2">Title</th>
             <th className="font-normal py-3 px-2 hidden md:table-cell">Artist</th>
-            <th className="font-normal py-3 px-2 hidden lg:table-cell">Album</th>
+            <th className="font-normal py-3 px-2 hidden lg:table-cell w-24">Language</th>
             <th className="font-normal py-3 px-2 w-12"></th>
             <th className="font-normal py-3 px-3 w-16 text-right"><Clock className="w-4 h-4 inline" /></th>
           </tr>
         </thead>
         <tbody>
-          {tracks.map((t, i) => {
+          {list.map((t, i) => {
             const isCurrent = current?.id === t.id;
             const isLiked = liked.has(t.id);
+            const lang = detectLanguage(`${t.title} ${t.artist}`);
             return (
               <tr
                 key={t.id}
@@ -166,7 +200,11 @@ const Search = () => {
                   </div>
                 </td>
                 <td className="py-2 px-2 text-muted-foreground hidden md:table-cell truncate max-w-[260px]">{t.artist}</td>
-                <td className="py-2 px-2 text-muted-foreground hidden lg:table-cell truncate max-w-[260px]">{t.album || "—"}</td>
+                <td className="py-2 px-2 hidden lg:table-cell">
+                  <span className={cn("inline-flex items-center px-2 py-0.5 rounded-full border text-[10px] font-medium", LANG_COLORS[lang])}>
+                    {LANG_LABEL[lang]}
+                  </span>
+                </td>
                 <td className="py-2 px-2">
                   <button
                     onClick={() => toggleLike(t.id)}
@@ -188,40 +226,79 @@ const Search = () => {
     </div>
   );
 
-  const renderArtists = () => (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-      {artists.map((a) => {
-        const firstTrack = results.find((t) => t.artist === a.name);
-        return (
+  const renderArtists = () => {
+    if (artists.length === 0) {
+      return <p className="text-muted-foreground text-sm">No artists found for this query.</p>;
+    }
+    return (
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+        {artists.map((a) => (
           <button
-            key={a.name}
-            onClick={() => firstTrack && playTrack(firstTrack, results.filter((t) => t.artist === a.name))}
+            key={a.id}
+            onClick={() => navigate(`/search?q=${encodeURIComponent(a.name)}`)}
             className="flex flex-col items-center gap-3 p-4 rounded-lg hover:bg-card/60 transition-colors text-center"
           >
             <img
-              src={a.artwork}
+              src={a.thumbnail}
               alt={a.name}
               className="w-32 h-32 rounded-full object-cover shadow-lg"
               onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")}
             />
             <div className="min-w-0 w-full">
               <div className="font-semibold truncate">{a.name}</div>
-              <div className="text-xs text-muted-foreground">Artist</div>
+              <div className="text-xs text-muted-foreground truncate">
+                {a.subscribers || "Artist"}
+              </div>
             </div>
           </button>
-        );
-      })}
-    </div>
-  );
+        ))}
+      </div>
+    );
+  };
+
+  const renderPlaylists = () => {
+    if (playlists.length === 0) {
+      return <p className="text-muted-foreground text-sm">No playlists found for this query.</p>;
+    }
+    return (
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+        {playlists.map((p) => (
+          <button
+            key={p.id}
+            onClick={() => navigate(`/search?q=${encodeURIComponent(p.title)}`)}
+            className="flex flex-col gap-3 p-3 rounded-lg hover:bg-card/60 transition-colors text-left"
+          >
+            <div className="relative w-full aspect-square rounded-md overflow-hidden shadow-lg bg-muted">
+              <img
+                src={p.thumbnail}
+                alt={p.title}
+                className="w-full h-full object-cover"
+                onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")}
+              />
+              <div className="absolute bottom-1.5 right-1.5 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded">
+                {p.videoCount} tracks
+              </div>
+            </div>
+            <div className="min-w-0">
+              <div className="font-semibold truncate">{p.title}</div>
+              <div className="text-xs text-muted-foreground truncate">{p.author || "Playlist"}</div>
+            </div>
+          </button>
+        ))}
+      </div>
+    );
+  };
 
   const renderAlbums = () => (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
       {albums.map((al) => {
-        const tracks = results.filter((t) => (t.album?.trim() || t.title) === al.name && t.artist === al.artist);
+        const albumTracks = filteredTracks.filter(
+          (t) => (t.album?.trim() || t.title) === al.name && t.artist === al.artist,
+        );
         return (
           <button
             key={`${al.name}-${al.artist}`}
-            onClick={() => tracks[0] && playTrack(tracks[0], tracks)}
+            onClick={() => albumTracks[0] && playTrack(albumTracks[0], albumTracks)}
             className="flex flex-col gap-3 p-3 rounded-lg hover:bg-card/60 transition-colors text-left"
           >
             <img
@@ -240,59 +317,133 @@ const Search = () => {
     </div>
   );
 
-  const renderTopResults = () => {
-    const top = results[0];
-    const list = results.slice(1, 5);
-    if (!top) return null;
+  const renderAll = () => {
+    const top = filteredTracks[0];
     return (
-      <div className="grid md:grid-cols-2 gap-6">
-        <div className="bg-card/40 rounded-xl p-5 hover:bg-card/70 transition-colors group">
-          <div className="text-sm text-muted-foreground mb-3">Top result</div>
-          <img
-            src={top.artwork}
-            alt={top.title}
-            className="w-32 h-32 rounded-md object-cover shadow-xl mb-4"
-            onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")}
-          />
-          <h2 className="text-2xl font-bold truncate">{top.title}</h2>
-          <p className="text-muted-foreground truncate mb-4">{top.artist}</p>
-          <Button
-            onClick={() => handleRowPlay(top)}
-            className="rounded-full gap-2"
-          >
-            {current?.id === top.id && isPlaying
-              ? <><Pause className="w-4 h-4 fill-current" /> Pause</>
-              : <><Play className="w-4 h-4 fill-current" /> Play</>}
-          </Button>
-        </div>
-        <div>
-          <div className="text-sm text-muted-foreground mb-3 px-2">Tracks</div>
-          {renderTracksTable(list)}
-        </div>
+      <div className="space-y-10">
+        {top && (
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="bg-card/40 rounded-xl p-5 hover:bg-card/70 transition-colors group">
+              <div className="text-sm text-muted-foreground mb-3">Top result</div>
+              <img
+                src={top.artwork}
+                alt={top.title}
+                className="w-32 h-32 rounded-md object-cover shadow-xl mb-4"
+                onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")}
+              />
+              <h2 className="text-2xl font-bold truncate">{top.title}</h2>
+              <p className="text-muted-foreground truncate mb-2">{top.artist}</p>
+              <Badge className={cn("mb-4", LANG_COLORS[detectLanguage(`${top.title} ${top.artist}`)])} variant="outline">
+                {LANG_LABEL[detectLanguage(`${top.title} ${top.artist}`)]}
+              </Badge>
+              <div>
+                <Button onClick={() => handleRowPlay(top)} className="rounded-full gap-2">
+                  {current?.id === top.id && isPlaying
+                    ? <><Pause className="w-4 h-4 fill-current" /> Pause</>
+                    : <><Play className="w-4 h-4 fill-current" /> Play</>}
+                </Button>
+              </div>
+            </div>
+            <div>
+              <div className="text-sm text-muted-foreground mb-3 px-2">Tracks</div>
+              {renderTracksTable(filteredTracks.slice(1, 5))}
+            </div>
+          </div>
+        )}
+
+        {artists.length > 0 && (
+          <section>
+            <h3 className="text-xl font-bold mb-4">Artists</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+              {artists.slice(0, 5).map((a) => (
+                <button
+                  key={a.id}
+                  onClick={() => navigate(`/search?q=${encodeURIComponent(a.name)}`)}
+                  className="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-card/60 transition-colors text-center"
+                >
+                  <img src={a.thumbnail} alt={a.name} className="w-24 h-24 rounded-full object-cover shadow-lg"
+                    onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")} />
+                  <div className="text-sm font-semibold truncate w-full">{a.name}</div>
+                  <div className="text-xs text-muted-foreground truncate w-full">{a.subscribers || "Artist"}</div>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {playlists.length > 0 && (
+          <section>
+            <h3 className="text-xl font-bold mb-4">Playlists</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+              {playlists.slice(0, 5).map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => navigate(`/search?q=${encodeURIComponent(p.title)}`)}
+                  className="flex flex-col gap-2 p-3 rounded-lg hover:bg-card/60 transition-colors text-left"
+                >
+                  <div className="relative w-full aspect-square rounded-md overflow-hidden shadow-lg bg-muted">
+                    <img src={p.thumbnail} alt={p.title} className="w-full h-full object-cover"
+                      onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")} />
+                    <div className="absolute bottom-1.5 right-1.5 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded">
+                      {p.videoCount}
+                    </div>
+                  </div>
+                  <div className="text-sm font-semibold truncate">{p.title}</div>
+                  <div className="text-xs text-muted-foreground truncate">{p.author || "Playlist"}</div>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
       </div>
     );
   };
 
   return (
     <div className="px-6 md:px-10 py-8 max-w-7xl mx-auto">
+      {/* Filter chips */}
+      {q && (tracks.length > 0 || artists.length > 0 || playlists.length > 0) && (
+        <>
+          <div className="flex items-center gap-2 flex-wrap mb-4">
+            {TABS.map((t) => {
+              const Icon = t.icon;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => setTab(t.id)}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-colors border",
+                    tab === t.id
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-secondary/60 text-muted-foreground border-border hover:text-foreground hover:bg-secondary"
+                  )}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  {t.label}
+                </button>
+              );
+            })}
+          </div>
 
-      {/* Tabs */}
-      {q && results.length > 0 && (
-        <div className="flex items-center gap-6 border-b border-border/40 mb-6">
-          {TABS.map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={cn(
-                "relative py-3 text-sm font-medium transition-colors",
-                tab === t ? "text-foreground" : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {t}
-              {tab === t && <span className="absolute left-0 right-0 -bottom-px h-0.5 bg-primary rounded-full" />}
-            </button>
-          ))}
-        </div>
+          {/* Language filter */}
+          <div className="flex items-center gap-2 flex-wrap mb-6 text-xs">
+            <span className="text-muted-foreground">Language:</span>
+            {(["all", "english", "hindi", "spanish", "korean", "japanese", "arabic"] as const).map((l) => (
+              <button
+                key={l}
+                onClick={() => setLangFilter(l)}
+                className={cn(
+                  "px-2.5 py-0.5 rounded-full border transition-colors",
+                  langFilter === l
+                    ? "bg-foreground text-background border-foreground"
+                    : "bg-transparent text-muted-foreground border-border/60 hover:text-foreground hover:border-border"
+                )}
+              >
+                {l === "all" ? "All" : LANG_LABEL[l as Language]}
+              </button>
+            ))}
+          </div>
+        </>
       )}
 
       {loading && (
@@ -314,7 +465,7 @@ const Search = () => {
         </div>
       )}
 
-      {!loading && !error && q && results.length === 0 && (
+      {!loading && !error && q && tracks.length === 0 && artists.length === 0 && playlists.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 text-center animate-fade-in">
           <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
             <SearchX className="w-8 h-8 text-muted-foreground" />
@@ -343,29 +494,35 @@ const Search = () => {
       {!q && (
         <div className="text-center py-12 text-muted-foreground">
           <SearchIcon className="w-12 h-12 mx-auto mb-3 opacity-50" />
-          <p>Search for any song, artist, or album</p>
+          <p>Search for any song, artist, album or playlist</p>
         </div>
       )}
 
-      {!loading && !error && results.length > 0 && (
+      {!loading && !error && (tracks.length > 0 || artists.length > 0 || playlists.length > 0) && (
         <div className="animate-fade-in">
-          {tab === "Top Results" && renderTopResults()}
-          {tab === "Tracks" && (
+          {tab === "all" && renderAll()}
+          {tab === "songs" && (
             <>
-              <h2 className="text-2xl font-bold mb-4">Tracks</h2>
-              {renderTracksTable(results)}
+              <h2 className="text-2xl font-bold mb-4">Songs</h2>
+              {renderTracksTable(filteredTracks)}
             </>
           )}
-          {tab === "Artists" && (
+          {tab === "artists" && (
             <>
               <h2 className="text-2xl font-bold mb-4">Artists</h2>
               {renderArtists()}
             </>
           )}
-          {tab === "Albums" && (
+          {tab === "albums" && (
             <>
               <h2 className="text-2xl font-bold mb-4">Albums</h2>
               {renderAlbums()}
+            </>
+          )}
+          {tab === "playlists" && (
+            <>
+              <h2 className="text-2xl font-bold mb-4">Playlists</h2>
+              {renderPlaylists()}
             </>
           )}
         </div>
