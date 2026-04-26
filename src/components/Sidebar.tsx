@@ -37,10 +37,7 @@ export const Sidebar = () => {
   const { user, signOut } = useAuth();
 
   const renderItem = (it: Item) => {
-    const active =
-      loc.pathname + loc.search === it.to ||
-      (it.to === "/" && loc.pathname === "/" && loc.search === "") ||
-      (it.to !== "/" && loc.pathname === it.to.split("?")[0] && !it.to.includes("?") && !loc.search);
+    const active = loc.pathname + loc.search === it.to;
     return (
       <Link
         key={it.to}
