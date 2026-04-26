@@ -43,8 +43,12 @@ import {
   isDownloaded,
   downloadTrack,
   removeDownload,
+  getDownloadedBlob,
+  DownloadCancelledError,
 } from "@/lib/offline-store";
 import { toast } from "sonner";
+import { Progress } from "@/components/ui/progress";
+import { X, WifiOff } from "lucide-react";
 
 const SUGGESTIONS = ["Daylight", "Arijit Singh", "Coldplay", "Lo-fi", "Taylor Swift", "Khuda Jaane"];
 const TABS = [
@@ -114,6 +118,8 @@ const Search = () => {
   // Per-track download state
   const [downloads, setDownloads] = useState<Set<string>>(new Set());
   const [downloading, setDownloading] = useState<Set<string>>(new Set());
+  const [progress, setProgress] = useState<Record<string, number>>({}); // 0-100
+  const abortersRef = useRef<Map<string, AbortController>>(new Map());
 
   const { current, isPlaying, playTrack, togglePlay } = usePlayer();
 
@@ -228,12 +234,33 @@ const Search = () => {
   };
 
   // ---------- Per-track download ----------
+  const cancelDownload = (id: string) => {
+    const ctrl = abortersRef.current.get(id);
+    ctrl?.abort();
+  };
+
+  const playOfflineTrack = async (track: Track) => {
+    const blob = await getDownloadedBlob(track.id);
+    if (!blob) {
+      toast.error("Offline copy missing");
+      return;
+    }
+    const objectUrl = URL.createObjectURL(blob);
+    playTrack({ ...track, audioUrl: objectUrl }, filteredTracks);
+  };
+
   const onDownload = async (track: Track) => {
+    // Already downloading -> cancel
+    if (downloading.has(track.id)) {
+      cancelDownload(track.id);
+      return;
+    }
     if (downloads.has(track.id)) {
       await removeDownload(track.id);
       setDownloads((s) => {
         const n = new Set(s); n.delete(track.id); return n;
       });
+      setProgress((p) => { const n = { ...p }; delete n[track.id]; return n; });
       toast.success("Removed from downloads");
       return;
     }
@@ -241,14 +268,31 @@ const Search = () => {
       toast.error("YouTube tracks can only be streamed live (ToS).");
       return;
     }
+    const ctrl = new AbortController();
+    abortersRef.current.set(track.id, ctrl);
     setDownloading((s) => new Set(s).add(track.id));
+    setProgress((p) => ({ ...p, [track.id]: 0 }));
     try {
-      await downloadTrack(track);
+      await downloadTrack(
+        track,
+        (loaded, total) => {
+          const pct = total > 0 ? Math.min(99, Math.round((loaded / total) * 100)) : 0;
+          setProgress((p) => ({ ...p, [track.id]: pct }));
+        },
+        ctrl.signal,
+      );
       setDownloads((s) => new Set(s).add(track.id));
+      setProgress((p) => ({ ...p, [track.id]: 100 }));
       toast.success(`"${track.title}" saved for offline`);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Download failed");
+      if (e instanceof DownloadCancelledError) {
+        toast.info("Download cancelled");
+      } else {
+        toast.error(e instanceof Error ? e.message : "Download failed");
+      }
+      setProgress((p) => { const n = { ...p }; delete n[track.id]; return n; });
     } finally {
+      abortersRef.current.delete(track.id);
       setDownloading((s) => {
         const n = new Set(s); n.delete(track.id); return n;
       });
@@ -308,7 +352,7 @@ const Search = () => {
             <th className="font-normal py-3 px-2 hidden md:table-cell">Artist</th>
             <th className="font-normal py-3 px-2 hidden lg:table-cell w-24">Language</th>
             <th className="font-normal py-3 px-2 w-12"></th>
-            <th className="font-normal py-3 px-2 w-12"></th>
+            <th className="font-normal py-3 px-2 w-32">Download</th>
             <th className="font-normal py-3 px-2 w-12"></th>
             <th className="font-normal py-3 px-3 w-16 text-right"><Clock className="w-4 h-4 inline" /></th>
           </tr>
@@ -382,23 +426,52 @@ const Search = () => {
                     </button>
                   </td>
                   <td className="py-2 px-2">
-                    <button
-                      onClick={() => onDownload(t)}
-                      disabled={isDownloadingNow}
-                      className={cn(
-                        "opacity-0 group-hover:opacity-100 transition-opacity",
-                        dl && "opacity-100 text-primary",
-                        isDownloadingNow && "opacity-100 text-muted-foreground",
-                      )}
-                      aria-label={dl ? "Remove download" : "Download"}
-                      title={t.source === "youtube" ? "YouTube tracks are stream-only" : dl ? "Saved offline" : "Save offline"}
-                    >
-                      {isDownloadingNow
-                        ? <Loader2 className="w-4 h-4 animate-spin" />
-                        : dl
-                          ? <Check className="w-4 h-4" />
-                          : <Download className="w-4 h-4" />}
-                    </button>
+                    {isDownloadingNow ? (
+                      <div className="flex items-center gap-2 min-w-[110px]">
+                        <Progress value={progress[t.id] ?? 0} className="h-1.5 flex-1" />
+                        <span className="text-[10px] tabular-nums text-muted-foreground w-8 text-right">
+                          {progress[t.id] ?? 0}%
+                        </span>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); cancelDownload(t.id); }}
+                          className="text-muted-foreground hover:text-destructive shrink-0"
+                          aria-label="Cancel download"
+                          title="Cancel download"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ) : dl ? (
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); playOfflineTrack(t); }}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary/15 text-primary border border-primary/30 hover:bg-primary/25 transition-colors"
+                          aria-label="Play offline"
+                          title="Play from offline copy"
+                        >
+                          <WifiOff className="w-3 h-3" />
+                          Play offline
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onDownload(t); }}
+                          className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                          aria-label="Remove download"
+                          title="Remove download"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onDownload(t); }}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
+                        aria-label="Download"
+                        title={t.source === "youtube" ? "YouTube tracks are stream-only" : "Save offline"}
+                        disabled={t.source === "youtube"}
+                      >
+                        <Download className="w-4 h-4" />
+                      </button>
+                    )}
                   </td>
                   <td className="py-2 px-2">
                     <button

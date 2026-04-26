@@ -17,7 +17,7 @@ import { AppLayout } from "./components/AppLayout";
 
 const queryClient = new QueryClient();
 
-// Public route — wraps in AppLayout but does NOT force auth.
+// Home is always accessible (signed-out users see only Home + Auth).
 const Public = ({ children }: { children: React.ReactNode }) => (
   <AppLayout>{children}</AppLayout>
 );
@@ -39,12 +39,12 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/auth" element={<Auth />} />
-              {/* Public — anyone can browse / play */}
+              {/* Home is the only public app page before sign-in */}
               <Route path="/" element={<Public><Home /></Public>} />
-              <Route path="/search" element={<Public><Search /></Public>} />
-              <Route path="/artist/:id" element={<Public><Artist /></Public>} />
-              <Route path="/downloads" element={<Public><Downloads /></Public>} />
-              {/* Protected — your personal data */}
+              {/* Everything else requires sign-in */}
+              <Route path="/search" element={<Protected><Search /></Protected>} />
+              <Route path="/artist/:id" element={<Protected><Artist /></Protected>} />
+              <Route path="/downloads" element={<Protected><Downloads /></Protected>} />
               <Route path="/library" element={<Protected><Library /></Protected>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
