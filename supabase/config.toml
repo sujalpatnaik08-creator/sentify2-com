@@ -1,1 +1,4 @@
 project_id = "ugmubwmdizalohhoedui"
+
+[functions.yt-search]
+verify_jwt = false
