@@ -42,48 +42,49 @@ export const Sidebar = () => {
   const { user, signOut } = useAuth();
 
   const renderItem = (it: Item) => {
-    const active = loc.pathname + loc.search === it.to || (it.to === "/" && loc.pathname === "/");
+    const active = loc.pathname + loc.search === it.to || (it.to === "/" && loc.pathname === "/" && loc.search === "");
     return (
       <Link
         key={it.to}
         to={it.to}
         className={cn(
-          "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+          "group relative flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all",
           active
-            ? "text-primary"
-            : "text-sidebar-foreground hover:text-foreground",
+            ? "bg-gradient-to-r from-primary/20 to-accent/10 text-foreground shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.25)]"
+            : "text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent/60",
         )}
       >
-        <it.icon className="w-[18px] h-[18px]" />
+        {active && <span className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-gradient-to-b from-primary to-accent" />}
+        <it.icon className={cn("w-[18px] h-[18px] transition-colors", active ? "text-primary" : "group-hover:text-primary")} />
         <span className="truncate">{it.label}</span>
       </Link>
     );
   };
 
   return (
-    <aside className="hidden md:flex fixed left-0 top-0 bottom-0 w-64 bg-sidebar border-r border-sidebar-border flex-col z-30">
-      <Link to="/" className="flex items-center gap-2 px-5 h-16 shrink-0 border-b border-sidebar-border">
-        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
+    <aside className="hidden md:flex fixed left-0 top-0 bottom-0 w-64 bg-sidebar/95 backdrop-blur-xl border-r border-sidebar-border flex-col z-30">
+      <Link to="/" className="flex items-center gap-2.5 px-5 h-16 shrink-0 border-b border-sidebar-border">
+        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary via-accent to-primary-glow flex items-center justify-center shadow-glow">
           <PlayCircle className="w-5 h-5 text-primary-foreground" />
         </div>
-        <span className="text-xl font-black tracking-wider">SENTIFY</span>
+        <span className="text-xl font-black tracking-wider text-gradient">SENTIFY</span>
       </Link>
 
       <div className="flex-1 overflow-y-auto py-4 px-3 space-y-6 scrollbar-hide">
-        <nav className="space-y-0.5">{discover.map(renderItem)}</nav>
+        <nav className="space-y-1">{discover.map(renderItem)}</nav>
 
         <div>
           <div className="px-3 mb-2 text-[11px] font-semibold tracking-widest text-sidebar-foreground/60 uppercase">
             Your Music
           </div>
-          <nav className="space-y-0.5">{yourMusic.map(renderItem)}</nav>
+          <nav className="space-y-1">{yourMusic.map(renderItem)}</nav>
         </div>
       </div>
 
       {user && (
         <div className="border-t border-sidebar-border p-3">
           <div className="px-2 text-xs text-sidebar-foreground/70 truncate mb-1">{user.email}</div>
-          <Button variant="ghost" size="sm" onClick={signOut} className="w-full justify-start">
+          <Button variant="ghost" size="sm" onClick={signOut} className="w-full justify-start hover:bg-sidebar-accent">
             <LogOut className="w-4 h-4 mr-2" />
             Sign out
           </Button>
