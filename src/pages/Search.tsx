@@ -588,4 +588,14 @@ const Search = () => {
   );
 };
 
+const DebugStat = ({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) => (
+  <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-secondary/60 border border-border/50">
+    {icon}
+    <div className="min-w-0">
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground truncate">{label}</div>
+      <div className="text-sm font-semibold tabular-nums">{value}</div>
+    </div>
+  </div>
+);
+
 export default Search;
