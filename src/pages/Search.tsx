@@ -404,8 +404,60 @@ const Search = () => {
     );
   };
 
+  // ---- Troubleshooting derived counts ----
+  const ytCount = tracks.filter((t) => t.source === "youtube").length;
+  const auCount = tracks.filter((t) => t.source === "audius").length;
+  const currentSource = current?.source ?? null;
+
   return (
     <div className="px-6 md:px-10 py-8 max-w-7xl mx-auto">
+      {/* Header row with troubleshooting toggle */}
+      {q && (
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <p className="text-xs text-muted-foreground truncate">
+            {loading ? "Searching…" : `Results for "${q}"`}
+          </p>
+          <button
+            onClick={() => setShowDebug((v) => !v)}
+            className={cn(
+              "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition-colors",
+              showDebug
+                ? "bg-primary/15 text-primary border-primary/40"
+                : "bg-secondary/60 text-muted-foreground border-border hover:text-foreground"
+            )}
+            aria-pressed={showDebug}
+          >
+            <Bug className="w-3.5 h-3.5" />
+            Troubleshoot
+          </button>
+        </div>
+      )}
+
+      {q && showDebug && (
+        <div className="mb-4 p-4 rounded-lg border border-border/60 bg-card/40 text-xs space-y-2 animate-fade-in">
+          <div className="flex items-center justify-between">
+            <span className="font-semibold text-sm flex items-center gap-1.5">
+              <Bug className="w-4 h-4 text-primary" /> Music source diagnostics
+            </span>
+            <span className="text-muted-foreground">{lastDuration}ms</span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <DebugStat icon={<Youtube className="w-3.5 h-3.5 text-red-500" />} label="YouTube tracks" value={ytCount} />
+            <DebugStat icon={<Radio className="w-3.5 h-3.5 text-purple-400" />} label="Audius tracks" value={auCount} />
+            <DebugStat icon={<User className="w-3.5 h-3.5 text-blue-400" />} label="Artists" value={artists.length} />
+            <DebugStat icon={<ListMusic className="w-3.5 h-3.5 text-amber-400" />} label="Playlists" value={playlists.length} />
+          </div>
+          <div className="pt-1 flex items-center gap-2 text-muted-foreground">
+            <CheckCircle2 className={cn("w-3.5 h-3.5", error ? "text-destructive" : "text-primary")} />
+            <span>
+              {error
+                ? `Error: ${error}`
+                : `Now playing source: ${currentSource ? currentSource.toUpperCase() : "—"}`}
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Filter chips */}
       {q && (tracks.length > 0 || artists.length > 0 || playlists.length > 0) && (
         <>
