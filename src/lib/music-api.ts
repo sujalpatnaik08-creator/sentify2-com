@@ -1,59 +1,79 @@
 import type { Track } from "@/types/music";
 
-// Jamendo: free, legal, full-length tracks from independent artists.
-// Public client_id documented in Jamendo API quickstart.
-const JAMENDO_CLIENT_ID = "8a59f08d";
-const JAMENDO_BASE = "https://api.jamendo.com/v3.0";
+// Deezer public API via CORS proxy (no API key needed).
+// Provides global music catalog with 30-second preview clips.
+const DEEZER_BASE = "https://api.deezer.com";
+const CORS_PROXY = "https://corsproxy.io/?url=";
 
-interface JamendoTrack {
-  id: string;
-  name: string;
-  artist_name: string;
-  album_name: string;
-  album_image: string;
-  image: string;
-  audio: string;
+interface DeezerTrack {
+  id: number;
+  title: string;
   duration: number;
+  preview: string;
+  artist: { name: string };
+  album: { title: string; cover_medium: string; cover_big: string };
 }
 
-const mapJamendo = (t: JamendoTrack): Track => ({
-  id: `j-${t.id}`,
-  title: t.name,
-  artist: t.artist_name,
-  album: t.album_name,
-  artwork: t.album_image || t.image || "/placeholder.svg",
-  audioUrl: t.audio,
+const mapDeezer = (t: DeezerTrack): Track => ({
+  id: `d-${t.id}`,
+  title: t.title,
+  artist: t.artist?.name || "Unknown",
+  album: t.album?.title || "",
+  artwork: t.album?.cover_big || t.album?.cover_medium || "/placeholder.svg",
+  audioUrl: t.preview,
   duration: t.duration,
-  source: "jamendo",
+  source: "deezer",
 });
+
+const proxied = (url: string) => `${CORS_PROXY}${encodeURIComponent(url)}`;
+
+async function deezerFetch(path: string): Promise<DeezerTrack[]> {
+  try {
+    const res = await fetch(proxied(`${DEEZER_BASE}${path}`));
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.data || data.tracks?.data || []).filter((t: DeezerTrack) => t.preview);
+  } catch {
+    return [];
+  }
+}
 
 export async function searchTracks(query: string, limit = 30): Promise<Track[]> {
   if (!query.trim()) return [];
-  const url = `${JAMENDO_BASE}/tracks/?client_id=${JAMENDO_CLIENT_ID}&format=json&limit=${limit}&search=${encodeURIComponent(
-    query,
-  )}&audioformat=mp32&include=musicinfo`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error("Search failed");
-  const data = await res.json();
-  return (data.results || []).map(mapJamendo);
+  const tracks = await deezerFetch(`/search?q=${encodeURIComponent(query)}&limit=${limit}`);
+  return tracks.map(mapDeezer);
 }
 
+const TAG_TO_QUERY: Record<string, string> = {
+  happy: "happy hits",
+  chill: "chill",
+  focus: "focus instrumental",
+  workout: "workout",
+  sad: "sad songs",
+  party: "party hits",
+  romance: "love songs",
+  sleep: "sleep relax",
+  pop: "pop hits",
+  rock: "rock hits",
+  electronic: "electronic dance",
+  hiphop: "hip hop",
+  jazz: "jazz",
+  classical: "classical music",
+};
+
 export async function tracksByTag(tag: string, limit = 30): Promise<Track[]> {
-  const url = `${JAMENDO_BASE}/tracks/?client_id=${JAMENDO_CLIENT_ID}&format=json&limit=${limit}&tags=${encodeURIComponent(
-    tag,
-  )}&audioformat=mp32&order=popularity_total`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error("Fetch failed");
-  const data = await res.json();
-  return (data.results || []).map(mapJamendo);
+  const q = TAG_TO_QUERY[tag.toLowerCase()] || tag;
+  const tracks = await deezerFetch(`/search?q=${encodeURIComponent(q)}&limit=${limit}`);
+  return tracks.map(mapDeezer);
 }
 
 export async function topTracks(limit = 30): Promise<Track[]> {
-  const url = `${JAMENDO_BASE}/tracks/?client_id=${JAMENDO_CLIENT_ID}&format=json&limit=${limit}&order=popularity_total&audioformat=mp32`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error("Fetch failed");
-  const data = await res.json();
-  return (data.results || []).map(mapJamendo);
+  // Deezer's "Top tracks" chart playlist
+  const tracks = await deezerFetch(`/chart/0/tracks?limit=${limit}`);
+  if (tracks.length) return tracks.map(mapDeezer);
+  // fallback
+  const fallback = await deezerFetch(`/search?q=top hits&limit=${limit}`);
+  return fallback.map(mapDeezer);
 }
 
 export async function fetchLyrics(artist: string, title: string): Promise<string | null> {
