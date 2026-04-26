@@ -352,7 +352,7 @@ const Search = () => {
             <th className="font-normal py-3 px-2 hidden md:table-cell">Artist</th>
             <th className="font-normal py-3 px-2 hidden lg:table-cell w-24">Language</th>
             <th className="font-normal py-3 px-2 w-12"></th>
-            <th className="font-normal py-3 px-2 w-12"></th>
+            <th className="font-normal py-3 px-2 w-32">Download</th>
             <th className="font-normal py-3 px-2 w-12"></th>
             <th className="font-normal py-3 px-3 w-16 text-right"><Clock className="w-4 h-4 inline" /></th>
           </tr>
