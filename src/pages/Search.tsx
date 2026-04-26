@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Search as SearchIcon,
@@ -18,14 +18,33 @@ import {
   Youtube,
   Radio,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  FileText,
+  Download,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { searchAll, detectLanguage, type ArtistResult, type PlaylistResult, type Language } from "@/lib/music-api";
+import {
+  searchAll,
+  searchPage,
+  detectLanguage,
+  fetchLyrics,
+  type ArtistResult,
+  type PlaylistResult,
+  type Language,
+} from "@/lib/music-api";
 import type { Track } from "@/types/music";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { cn } from "@/lib/utils";
 import { getLikedTracks, toggleLikedTrack } from "@/lib/user-prefs";
+import {
+  isDownloaded,
+  downloadTrack,
+  removeDownload,
+} from "@/lib/offline-store";
+import { toast } from "sonner";
 
 const SUGGESTIONS = ["Daylight", "Arijit Singh", "Coldplay", "Lo-fi", "Taylor Swift", "Khuda Jaane"];
 const TABS = [
@@ -64,17 +83,20 @@ const fmt = (s: number) => {
   return `${m.toString().padStart(2, "0")}:${sec.toString().padStart(2, "0")}`;
 };
 
-const initialLikedSet = (): Set<string> =>
-  new Set(getLikedTracks().map((t) => t.id));
+const initialLikedSet = (): Set<string> => new Set(getLikedTracks().map((t) => t.id));
 
 const Search = () => {
   const loc = useLocation();
   const navigate = useNavigate();
   const q = new URLSearchParams(loc.search).get("q") || "";
+
   const [tracks, setTracks] = useState<Track[]>([]);
   const [artists, setArtists] = useState<ArtistResult[]>([]);
   const [playlists, setPlaylists] = useState<PlaylistResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [tab, setTab] = useState<Tab>("all");
@@ -83,24 +105,41 @@ const Search = () => {
   const [showDebug, setShowDebug] = useState(false);
   const [lastDuration, setLastDuration] = useState<number>(0);
 
+  // Per-track expanded lyrics state
+  const [openLyrics, setOpenLyrics] = useState<string | null>(null);
+  const [lyricsCache, setLyricsCache] = useState<
+    Record<string, { state: "loading" | "done" | "none" | "error"; text?: string }>
+  >({});
+
+  // Per-track download state
+  const [downloads, setDownloads] = useState<Set<string>>(new Set());
+  const [downloading, setDownloading] = useState<Set<string>>(new Set());
+
   const { current, isPlaying, playTrack, togglePlay } = usePlayer();
 
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  // ---------- Initial / re-search ----------
   const runSearch = useCallback(async (query: string) => {
     if (!query.trim()) {
-      setTracks([]); setArtists([]); setPlaylists([]); setError(null);
+      setTracks([]); setArtists([]); setPlaylists([]); setError(null); setHasMore(false);
       return;
     }
     setLoading(true);
     setError(null);
+    setPage(0);
+    setHasMore(true);
     const t0 = performance.now();
     try {
       const data = await searchAll(query, 40);
       setTracks(data.tracks);
       setArtists(data.artists);
       setPlaylists(data.playlists);
+      setHasMore(data.tracks.length >= 20);
     } catch (err) {
       setTracks([]); setArtists([]); setPlaylists([]);
       setError(err instanceof Error ? err.message : "Something went wrong while searching.");
+      setHasMore(false);
     } finally {
       setLastDuration(Math.round(performance.now() - t0));
       setLoading(false);
@@ -112,6 +151,51 @@ const Search = () => {
     return () => clearTimeout(id);
   }, [q, attempt, runSearch]);
 
+  // ---------- Infinite scroll: load next page ----------
+  const loadMore = useCallback(async () => {
+    if (!q.trim() || loading || loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      const next = page + 1;
+      const data = await searchPage(q, next, 30);
+      // De-dupe by id across new + old
+      const seen = new Set([...tracks.map((t) => t.id)]);
+      const seenArtists = new Set(artists.map((a) => a.id));
+      const seenPl = new Set(playlists.map((p) => p.id));
+      const newTracks = data.tracks.filter((t) => !seen.has(t.id));
+      const newArtists = data.artists.filter((a) => !seenArtists.has(a.id));
+      const newPlaylists = data.playlists.filter((p) => !seenPl.has(p.id));
+
+      if (newTracks.length === 0 && newArtists.length === 0 && newPlaylists.length === 0) {
+        setHasMore(false);
+      } else {
+        setTracks((prev) => [...prev, ...newTracks]);
+        setArtists((prev) => [...prev, ...newArtists]);
+        setPlaylists((prev) => [...prev, ...newPlaylists]);
+        setPage(next);
+        // After a few pages, the variants run out — stop trying
+        if (next >= 6) setHasMore(false);
+      }
+    } catch {
+      setHasMore(false);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [q, page, tracks, artists, playlists, loading, loadingMore, hasMore]);
+
+  useEffect(() => {
+    if (!sentinelRef.current) return;
+    const el = sentinelRef.current;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) loadMore();
+      },
+      { rootMargin: "400px" },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [loadMore]);
+
   const retry = () => setAttempt((n) => n + 1);
 
   const toggleLike = (id: string) => {
@@ -121,13 +205,76 @@ const Search = () => {
     setLiked(initialLikedSet());
   };
 
+  // ---------- Per-track lyrics ----------
+  const toggleTrackLyrics = (track: Track) => {
+    if (openLyrics === track.id) {
+      setOpenLyrics(null);
+      return;
+    }
+    setOpenLyrics(track.id);
+    if (lyricsCache[track.id]?.state === "done") return;
+    setLyricsCache((c) => ({ ...c, [track.id]: { state: "loading" } }));
+    fetchLyrics(track.artist, track.title, track.duration)
+      .then((res) => {
+        const text = res.plain ?? (res.synced ? res.synced.map((l) => l.text).join("\n") : "");
+        setLyricsCache((c) => ({
+          ...c,
+          [track.id]: text
+            ? { state: "done", text }
+            : { state: "none" },
+        }));
+      })
+      .catch(() => setLyricsCache((c) => ({ ...c, [track.id]: { state: "error" } })));
+  };
+
+  // ---------- Per-track download ----------
+  const onDownload = async (track: Track) => {
+    if (downloads.has(track.id)) {
+      await removeDownload(track.id);
+      setDownloads((s) => {
+        const n = new Set(s); n.delete(track.id); return n;
+      });
+      toast.success("Removed from downloads");
+      return;
+    }
+    if (track.source === "youtube") {
+      toast.error("YouTube tracks can only be streamed live (ToS).");
+      return;
+    }
+    setDownloading((s) => new Set(s).add(track.id));
+    try {
+      await downloadTrack(track);
+      setDownloads((s) => new Set(s).add(track.id));
+      toast.success(`"${track.title}" saved for offline`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Download failed");
+    } finally {
+      setDownloading((s) => {
+        const n = new Set(s); n.delete(track.id); return n;
+      });
+    }
+  };
+
+  // Refresh download flags for visible tracks whenever the list changes
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const next = new Set<string>();
+      for (const t of tracks) {
+        if (await isDownloaded(t.id)) next.add(t.id);
+      }
+      if (!cancelled) setDownloads(next);
+    })();
+    return () => { cancelled = true; };
+  }, [tracks]);
+
   // Language-filtered tracks
   const filteredTracks =
     langFilter === "all"
       ? tracks
       : tracks.filter((t) => detectLanguage(`${t.title} ${t.artist}`) === langFilter);
 
-  // Albums derived from tracks (group by album when present, else by artist)
+  // Albums derived from tracks
   const albums = (() => {
     const map = new Map<string, { name: string; artist: string; artwork: string; count: number }>();
     for (const t of filteredTracks) {
@@ -144,6 +291,11 @@ const Search = () => {
     else playTrack(t, filteredTracks);
   };
 
+  const goToArtist = (a: ArtistResult) => {
+    const params = new URLSearchParams({ name: a.name, thumb: a.thumbnail });
+    navigate(`/artist/${encodeURIComponent(a.id || a.name)}?${params.toString()}`);
+  };
+
   // ---- Renderers ----
 
   const renderTracksTable = (list: Track[]) => (
@@ -156,74 +308,133 @@ const Search = () => {
             <th className="font-normal py-3 px-2 hidden md:table-cell">Artist</th>
             <th className="font-normal py-3 px-2 hidden lg:table-cell w-24">Language</th>
             <th className="font-normal py-3 px-2 w-12"></th>
+            <th className="font-normal py-3 px-2 w-12"></th>
+            <th className="font-normal py-3 px-2 w-12"></th>
             <th className="font-normal py-3 px-3 w-16 text-right"><Clock className="w-4 h-4 inline" /></th>
           </tr>
         </thead>
         <tbody>
           {list.map((t, i) => {
             const isCurrent = current?.id === t.id;
-            const isLiked = liked.has(t.id);
+            const isLikedT = liked.has(t.id);
             const lang = detectLanguage(`${t.title} ${t.artist}`);
+            const isExpanded = openLyrics === t.id;
+            const lyricsState = lyricsCache[t.id];
+            const dl = downloads.has(t.id);
+            const isDownloadingNow = downloading.has(t.id);
             return (
-              <tr
-                key={t.id}
-                onDoubleClick={() => handleRowPlay(t)}
-                className={cn(
-                  "group border-b border-border/20 hover:bg-card/60 transition-colors cursor-pointer",
-                  isCurrent && "bg-primary/5"
-                )}
-              >
-                <td className="py-2 pl-3 pr-2 text-muted-foreground">
-                  <div className="relative w-6 h-6 flex items-center justify-center">
-                    <span className={cn("group-hover:hidden", isCurrent && "hidden")}>{i + 1}</span>
-                    <button
-                      onClick={() => handleRowPlay(t)}
-                      className={cn(
-                        "hidden group-hover:flex items-center justify-center text-foreground",
-                        isCurrent && "flex"
-                      )}
-                      aria-label={isCurrent && isPlaying ? "Pause" : "Play"}
-                    >
-                      {isCurrent && isPlaying
-                        ? <Pause className="w-4 h-4 fill-current" />
-                        : <Play className="w-4 h-4 fill-current" />}
-                    </button>
-                  </div>
-                </td>
-                <td className="py-2 px-2">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <img
-                      src={t.artwork}
-                      alt={t.title}
-                      className="w-10 h-10 rounded object-cover shrink-0"
-                      onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")}
-                    />
-                    <div className="min-w-0">
-                      <div className={cn("truncate font-medium", isCurrent && "text-primary")}>{t.title}</div>
-                      <div className="md:hidden text-xs text-muted-foreground truncate">{t.artist}</div>
+              <FragmentRow key={t.id}>
+                <tr
+                  onDoubleClick={() => handleRowPlay(t)}
+                  className={cn(
+                    "group border-b border-border/20 hover:bg-card/60 transition-colors cursor-pointer",
+                    isCurrent && "bg-primary/5",
+                    isExpanded && "bg-card/40",
+                  )}
+                >
+                  <td className="py-2 pl-3 pr-2 text-muted-foreground">
+                    <div className="relative w-6 h-6 flex items-center justify-center">
+                      <span className={cn("group-hover:hidden", isCurrent && "hidden")}>{i + 1}</span>
+                      <button
+                        onClick={() => handleRowPlay(t)}
+                        className={cn(
+                          "hidden group-hover:flex items-center justify-center text-foreground",
+                          isCurrent && "flex"
+                        )}
+                        aria-label={isCurrent && isPlaying ? "Pause" : "Play"}
+                      >
+                        {isCurrent && isPlaying
+                          ? <Pause className="w-4 h-4 fill-current" />
+                          : <Play className="w-4 h-4 fill-current" />}
+                      </button>
                     </div>
-                  </div>
-                </td>
-                <td className="py-2 px-2 text-muted-foreground hidden md:table-cell truncate max-w-[260px]">{t.artist}</td>
-                <td className="py-2 px-2 hidden lg:table-cell">
-                  <span className={cn("inline-flex items-center px-2 py-0.5 rounded-full border text-[10px] font-medium", LANG_COLORS[lang])}>
-                    {LANG_LABEL[lang]}
-                  </span>
-                </td>
-                <td className="py-2 px-2">
-                  <button
-                    onClick={() => toggleLike(t.id)}
-                    className={cn(
-                      "opacity-0 group-hover:opacity-100 transition-opacity",
-                      isLiked && "opacity-100 text-primary"
-                    )}
-                    aria-label="Like"
-                  >
-                    <Heart className={cn("w-4 h-4", isLiked && "fill-current")} />
-                  </button>
-                </td>
-                <td className="py-2 px-3 text-right text-muted-foreground tabular-nums">{fmt(t.duration)}</td>
-              </tr>
+                  </td>
+                  <td className="py-2 px-2">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <img
+                        src={t.artwork}
+                        alt={t.title}
+                        className="w-10 h-10 rounded object-cover shrink-0"
+                        onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")}
+                      />
+                      <div className="min-w-0">
+                        <div className={cn("truncate font-medium", isCurrent && "text-primary")}>{t.title}</div>
+                        <div className="md:hidden text-xs text-muted-foreground truncate">{t.artist}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="py-2 px-2 text-muted-foreground hidden md:table-cell truncate max-w-[260px]">{t.artist}</td>
+                  <td className="py-2 px-2 hidden lg:table-cell">
+                    <span className={cn("inline-flex items-center px-2 py-0.5 rounded-full border text-[10px] font-medium", LANG_COLORS[lang])}>
+                      {LANG_LABEL[lang]}
+                    </span>
+                  </td>
+                  <td className="py-2 px-2">
+                    <button
+                      onClick={() => toggleLike(t.id)}
+                      className={cn(
+                        "opacity-0 group-hover:opacity-100 transition-opacity",
+                        isLikedT && "opacity-100 text-primary"
+                      )}
+                      aria-label="Like"
+                    >
+                      <Heart className={cn("w-4 h-4", isLikedT && "fill-current")} />
+                    </button>
+                  </td>
+                  <td className="py-2 px-2">
+                    <button
+                      onClick={() => onDownload(t)}
+                      disabled={isDownloadingNow}
+                      className={cn(
+                        "opacity-0 group-hover:opacity-100 transition-opacity",
+                        dl && "opacity-100 text-primary",
+                        isDownloadingNow && "opacity-100 text-muted-foreground",
+                      )}
+                      aria-label={dl ? "Remove download" : "Download"}
+                      title={t.source === "youtube" ? "YouTube tracks are stream-only" : dl ? "Saved offline" : "Save offline"}
+                    >
+                      {isDownloadingNow
+                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                        : dl
+                          ? <Check className="w-4 h-4" />
+                          : <Download className="w-4 h-4" />}
+                    </button>
+                  </td>
+                  <td className="py-2 px-2">
+                    <button
+                      onClick={() => toggleTrackLyrics(t)}
+                      className={cn(
+                        "opacity-0 group-hover:opacity-100 transition-opacity",
+                        isExpanded && "opacity-100 text-primary",
+                      )}
+                      aria-label={isExpanded ? "Hide lyrics" : "Show lyrics"}
+                      title={isExpanded ? "Hide lyrics" : "Fetch lyrics"}
+                    >
+                      {isExpanded ? <ChevronUp className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
+                    </button>
+                  </td>
+                  <td className="py-2 px-3 text-right text-muted-foreground tabular-nums">{fmt(t.duration)}</td>
+                </tr>
+                {isExpanded && (
+                  <tr className="bg-card/30 border-b border-border/30">
+                    <td colSpan={8} className="px-6 py-4">
+                      <LyricsRow
+                        state={lyricsState?.state ?? "loading"}
+                        text={lyricsState?.text}
+                        onRetry={() => {
+                          setLyricsCache((c) => {
+                            const n = { ...c }; delete n[t.id]; return n;
+                          });
+                          toggleTrackLyrics(t);
+                          // Re-open since toggle just closed it
+                          setOpenLyrics(t.id);
+                        }}
+                        onClose={() => setOpenLyrics(null)}
+                      />
+                    </td>
+                  </tr>
+                )}
+              </FragmentRow>
             );
           })}
         </tbody>
@@ -240,7 +451,7 @@ const Search = () => {
         {artists.map((a) => (
           <button
             key={a.id}
-            onClick={() => navigate(`/search?q=${encodeURIComponent(a.name)}`)}
+            onClick={() => goToArtist(a)}
             className="flex flex-col items-center gap-3 p-4 rounded-lg hover:bg-card/60 transition-colors text-center"
           >
             <img
@@ -363,7 +574,7 @@ const Search = () => {
               {artists.slice(0, 5).map((a) => (
                 <button
                   key={a.id}
-                  onClick={() => navigate(`/search?q=${encodeURIComponent(a.name)}`)}
+                  onClick={() => goToArtist(a)}
                   className="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-card/60 transition-colors text-center"
                 >
                   <img src={a.thumbnail} alt={a.name} className="w-24 h-24 rounded-full object-cover shadow-lg"
@@ -400,6 +611,11 @@ const Search = () => {
             </div>
           </section>
         )}
+
+        <section>
+          <h3 className="text-xl font-bold mb-4">More songs</h3>
+          {renderTracksTable(filteredTracks.slice(5))}
+        </section>
       </div>
     );
   };
@@ -415,7 +631,7 @@ const Search = () => {
       {q && (
         <div className="flex items-center justify-between gap-3 mb-3">
           <p className="text-xs text-muted-foreground truncate">
-            {loading ? "Searching…" : `Results for "${q}"`}
+            {loading ? "Searching…" : `Results for "${q}" · ${tracks.length} songs`}
           </p>
           <button
             onClick={() => setShowDebug((v) => !v)}
@@ -452,7 +668,7 @@ const Search = () => {
             <span>
               {error
                 ? `Error: ${error}`
-                : `Now playing source: ${currentSource ? currentSource.toUpperCase() : "—"}`}
+                : `Now playing source: ${currentSource ? currentSource.toUpperCase() : "—"} · Page ${page + 1}`}
             </span>
           </div>
         </div>
@@ -582,11 +798,82 @@ const Search = () => {
               {renderPlaylists()}
             </>
           )}
+
+          {/* Infinite-scroll sentinel */}
+          {hasMore && (
+            <div ref={sentinelRef} className="flex justify-center py-8">
+              {loadingMore ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Loading more…
+                </div>
+              ) : (
+                <span className="text-xs text-muted-foreground">Scroll for more</span>
+              )}
+            </div>
+          )}
+          {!hasMore && tracks.length > 0 && (
+            <p className="text-center text-xs text-muted-foreground py-8">
+              You've reached the end · {tracks.length} tracks
+            </p>
+          )}
         </div>
       )}
     </div>
   );
 };
+
+// Small fragment helper so we can return two <tr>s from a .map() in <tbody>
+const FragmentRow = ({ children }: { children: React.ReactNode }) => <>{children}</>;
+
+const LyricsRow = ({
+  state,
+  text,
+  onRetry,
+  onClose,
+}: {
+  state: "loading" | "done" | "none" | "error";
+  text?: string;
+  onRetry: () => void;
+  onClose: () => void;
+}) => (
+  <div className="space-y-3">
+    <div className="flex items-center justify-between">
+      <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary">
+        <FileText className="w-3.5 h-3.5" /> Lyrics
+      </span>
+      <button onClick={onClose} className="text-xs text-muted-foreground hover:text-foreground">
+        Hide
+      </button>
+    </div>
+    {state === "loading" && (
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Loader2 className="w-4 h-4 animate-spin" /> Fetching lyrics…
+      </div>
+    )}
+    {state === "done" && text && (
+      <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-foreground/90 max-h-80 overflow-y-auto">
+        {text}
+      </pre>
+    )}
+    {state === "none" && (
+      <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
+        <span>No lyrics found for this track.</span>
+        <Button size="sm" variant="ghost" onClick={onRetry} className="h-7">
+          <RefreshCw className="w-3.5 h-3.5 mr-1" /> Retry
+        </Button>
+      </div>
+    )}
+    {state === "error" && (
+      <div className="flex items-center justify-between gap-3 text-sm text-destructive">
+        <span>Couldn't load lyrics.</span>
+        <Button size="sm" variant="ghost" onClick={onRetry} className="h-7">
+          <RefreshCw className="w-3.5 h-3.5 mr-1" /> Retry
+        </Button>
+      </div>
+    )}
+  </div>
+);
 
 const DebugStat = ({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) => (
   <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-secondary/60 border border-border/50">
