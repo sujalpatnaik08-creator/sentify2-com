@@ -14,9 +14,9 @@ export interface Track {
   artist: string;
   album?: string;
   artwork: string;
-  audioUrl: string;
+  audioUrl: string; // direct audio url (audius) OR youtube video id when source==="youtube"
   duration: number; // seconds
-  source: "jamendo" | "deezer";
+  source: "audius" | "youtube";
 }
 
 export interface Playlist {
@@ -29,12 +29,12 @@ export interface Playlist {
 }
 
 export const MOODS: { id: Mood; label: string; emoji: string; gradient: string; tag: string }[] = [
-  { id: "happy", label: "Happy", emoji: "😊", gradient: "var(--gradient-mood-happy)", tag: "pop" },
-  { id: "chill", label: "Chill", emoji: "🌊", gradient: "var(--gradient-mood-chill)", tag: "chillout" },
-  { id: "focus", label: "Focus", emoji: "🎯", gradient: "var(--gradient-mood-focus)", tag: "ambient" },
-  { id: "workout", label: "Workout", emoji: "💪", gradient: "var(--gradient-mood-workout)", tag: "rock" },
-  { id: "sad", label: "Sad", emoji: "💧", gradient: "var(--gradient-mood-sad)", tag: "acoustic" },
-  { id: "party", label: "Party", emoji: "🎉", gradient: "var(--gradient-mood-party)", tag: "electronic" },
-  { id: "romance", label: "Romance", emoji: "💕", gradient: "var(--gradient-mood-romance)", tag: "love" },
-  { id: "sleep", label: "Sleep", emoji: "🌙", gradient: "var(--gradient-mood-sleep)", tag: "instrumental" },
+  { id: "happy", label: "Happy", emoji: "😊", gradient: "var(--gradient-mood-happy)", tag: "happy hits" },
+  { id: "chill", label: "Chill", emoji: "🌊", gradient: "var(--gradient-mood-chill)", tag: "chill lofi" },
+  { id: "focus", label: "Focus", emoji: "🎯", gradient: "var(--gradient-mood-focus)", tag: "focus instrumental" },
+  { id: "workout", label: "Workout", emoji: "💪", gradient: "var(--gradient-mood-workout)", tag: "workout hits" },
+  { id: "sad", label: "Sad", emoji: "💧", gradient: "var(--gradient-mood-sad)", tag: "sad songs" },
+  { id: "party", label: "Party", emoji: "🎉", gradient: "var(--gradient-mood-party)", tag: "party hits" },
+  { id: "romance", label: "Romance", emoji: "💕", gradient: "var(--gradient-mood-romance)", tag: "romantic hindi songs" },
+  { id: "sleep", label: "Sleep", emoji: "🌙", gradient: "var(--gradient-mood-sleep)", tag: "sleep music" },
 ];
