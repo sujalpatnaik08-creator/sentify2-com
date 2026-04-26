@@ -27,20 +27,24 @@ const mapDeezer = (t: DeezerTrack): Track => ({
 
 const proxied = (url: string) => `${CORS_PROXY}${encodeURIComponent(url)}`;
 
-async function deezerFetch(path: string): Promise<DeezerTrack[]> {
+async function deezerFetch(path: string, throwOnError = false): Promise<DeezerTrack[]> {
   try {
     const res = await fetch(proxied(`${DEEZER_BASE}${path}`));
-    if (!res.ok) return [];
+    if (!res.ok) {
+      if (throwOnError) throw new Error(`Music service returned ${res.status}`);
+      return [];
+    }
     const data = await res.json();
     return (data.data || data.tracks?.data || []).filter((t: DeezerTrack) => t.preview);
-  } catch {
+  } catch (err) {
+    if (throwOnError) throw err instanceof Error ? err : new Error("Network error");
     return [];
   }
 }
 
 export async function searchTracks(query: string, limit = 30): Promise<Track[]> {
   if (!query.trim()) return [];
-  const tracks = await deezerFetch(`/search?q=${encodeURIComponent(query)}&limit=${limit}`);
+  const tracks = await deezerFetch(`/search?q=${encodeURIComponent(query)}&limit=${limit}`, true);
   return tracks.map(mapDeezer);
 }
 
