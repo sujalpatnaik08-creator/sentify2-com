@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Input } from "@/components/ui/input";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Search as SearchIcon,
   Loader2,
@@ -34,7 +34,9 @@ const getLiked = (): Set<string> => {
 };
 
 const Search = () => {
-  const [q, setQ] = useState("");
+  const loc = useLocation();
+  const navigate = useNavigate();
+  const q = new URLSearchParams(loc.search).get("q") || "";
   const [results, setResults] = useState<Track[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -273,16 +275,6 @@ const Search = () => {
 
   return (
     <div className="px-6 md:px-10 py-8 max-w-7xl mx-auto">
-      <div className="relative max-w-2xl mb-6">
-        <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-        <Input
-          autoFocus
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Search songs, artists, albums…"
-          className="pl-12 h-14 text-base rounded-full bg-card border-border/50"
-        />
-      </div>
 
       {/* Tabs */}
       {q && results.length > 0 && (
@@ -335,7 +327,7 @@ const Search = () => {
             {SUGGESTIONS.map((s) => (
               <button
                 key={s}
-                onClick={() => setQ(s)}
+                onClick={() => navigate(`/search?q=${encodeURIComponent(s)}`)}
                 className="px-3 py-1.5 rounded-full bg-secondary hover:bg-secondary/80 text-sm transition-colors"
               >
                 {s}
