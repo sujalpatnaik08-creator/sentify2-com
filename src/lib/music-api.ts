@@ -1,14 +1,98 @@
 import type { Track } from "@/types/music";
 
-// Audius — decentralized music platform with full-length track streaming.
-// Public API, CORS-enabled, no API key, no proxy. Streams full songs (not previews).
+// =============================================================================
+// Music sources
+// =============================================================================
+// Sentify uses TWO sources, all free, no API key, CORS-enabled, FULL-LENGTH:
+//   1. YouTube (via Piped public instances) — primary source, has every
+//      Bollywood/Hollywood/global song. Full-length. Played via YouTube IFrame.
+//   2. Audius — fallback for indie/electronic catalog.
+// =============================================================================
+
+const PIPED_INSTANCES = [
+  "https://pipedapi.kavin.rocks",
+  "https://pipedapi.adminforge.de",
+  "https://api-piped.mha.fi",
+  "https://pipedapi.reallyaweso.me",
+];
+
 const AUDIUS_HOST = "https://discoveryprovider.audius.co";
 const APP_NAME = "sentify";
 
-interface AudiusUser {
-  name?: string;
-  handle?: string;
+// ---------- YouTube via Piped ----------
+
+interface PipedItem {
+  type?: string;
+  url?: string;        // "/watch?v=XXXX"
+  title?: string;
+  thumbnail?: string;
+  uploaderName?: string;
+  uploader?: string;
+  duration?: number;
 }
+
+const ytIdFromUrl = (url?: string): string | null => {
+  if (!url) return null;
+  const m = url.match(/[?&]v=([\w-]{11})/);
+  return m ? m[1] : null;
+};
+
+const mapPiped = (item: PipedItem): Track | null => {
+  const id = ytIdFromUrl(item.url);
+  if (!id || !item.title) return null;
+  return {
+    id: `yt-${id}`,
+    title: item.title,
+    artist: item.uploaderName || item.uploader || "YouTube",
+    album: "",
+    artwork:
+      item.thumbnail ||
+      `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
+    audioUrl: id, // store youtube video id
+    duration: item.duration && item.duration > 0 ? item.duration : 0,
+    source: "youtube",
+  };
+};
+
+async function pipedFetch(path: string): Promise<PipedItem[]> {
+  for (const host of PIPED_INSTANCES) {
+    try {
+      const res = await fetch(`${host}${path}`);
+      if (!res.ok) continue;
+      const data = await res.json();
+      // search returns { items: [...] }, trending returns array directly
+      if (Array.isArray(data)) return data;
+      if (Array.isArray(data.items)) return data.items;
+      return [];
+    } catch {
+      continue;
+    }
+  }
+  return [];
+}
+
+async function youtubeSearch(query: string, limit: number): Promise<Track[]> {
+  const items = await pipedFetch(
+    `/search?q=${encodeURIComponent(query)}&filter=music_songs`,
+  );
+  const tracks: Track[] = [];
+  for (const it of items) {
+    if (it.type && it.type !== "stream") continue;
+    const t = mapPiped(it);
+    if (t) tracks.push(t);
+    if (tracks.length >= limit) break;
+  }
+  return tracks;
+}
+
+async function youtubeTrending(limit: number): Promise<Track[]> {
+  // Piped trending isn't music-filtered, so search popular charts instead.
+  return youtubeSearch("top hits 2024", limit);
+}
+
+// ---------- Audius fallback ----------
+
+interface AudiusUser { name?: string; handle?: string }
 interface AudiusTrack {
   id: string;
   title: string;
@@ -16,7 +100,6 @@ interface AudiusTrack {
   user?: AudiusUser;
   artwork?: { "150x150"?: string; "480x480"?: string; "1000x1000"?: string } | null;
   genre?: string;
-  mood?: string;
 }
 
 const mapAudius = (t: AudiusTrack): Track => ({
@@ -31,87 +114,140 @@ const mapAudius = (t: AudiusTrack): Track => ({
     "/placeholder.svg",
   audioUrl: `${AUDIUS_HOST}/v1/tracks/${t.id}/stream?app_name=${APP_NAME}`,
   duration: t.duration || 0,
-  source: "deezer",
+  source: "audius",
 });
 
-async function audiusFetch(path: string, throwOnError = false): Promise<AudiusTrack[]> {
+async function audiusFetch(path: string): Promise<AudiusTrack[]> {
   try {
     const sep = path.includes("?") ? "&" : "?";
     const res = await fetch(`${AUDIUS_HOST}${path}${sep}app_name=${APP_NAME}`);
-    if (!res.ok) {
-      if (throwOnError) throw new Error(`Music service returned ${res.status}`);
-      return [];
-    }
+    if (!res.ok) return [];
     const data = await res.json();
     return (data.data || []).filter((t: AudiusTrack) => t && t.id && t.title);
-  } catch (err) {
-    if (throwOnError) throw err instanceof Error ? err : new Error("Network error");
+  } catch {
     return [];
   }
 }
 
+// ---------- Public API ----------
+
 export async function searchTracks(query: string, limit = 30): Promise<Track[]> {
   if (!query.trim()) return [];
-  const tracks = await audiusFetch(
+  // Try YouTube first (full Bollywood/Hollywood/world catalog).
+  const yt = await youtubeSearch(query, limit);
+  if (yt.length > 0) return yt;
+  // Fallback to Audius.
+  const au = await audiusFetch(
     `/v1/tracks/search?query=${encodeURIComponent(query)}&limit=${limit}`,
-    true,
   );
-  return tracks.map(mapAudius);
+  if (au.length > 0) return au.map(mapAudius);
+  throw new Error("Music service is unreachable. Please try again.");
 }
 
-const TAG_TO_GENRE: Record<string, string> = {
-  happy: "Pop",
-  chill: "Electronic",
-  focus: "Ambient",
-  workout: "Electronic",
-  sad: "Acoustic",
-  party: "Electronic",
-  romance: "R&B/Soul",
-  sleep: "Ambient",
-  pop: "Pop",
-  rock: "Rock",
-  electronic: "Electronic",
-  hiphop: "Hip-Hop/Rap",
-  jazz: "Jazz",
-  classical: "Classical",
-  chillout: "Electronic",
-  ambient: "Ambient",
-  acoustic: "Acoustic",
-  love: "R&B/Soul",
-  instrumental: "Ambient",
-};
-
 export async function tracksByTag(tag: string, limit = 30): Promise<Track[]> {
-  const genre = TAG_TO_GENRE[tag.toLowerCase()] || tag;
-  const tracks = await audiusFetch(
-    `/v1/tracks/trending?genre=${encodeURIComponent(genre)}&limit=${limit}`,
-  );
-  if (tracks.length) return tracks.map(mapAudius);
-  // fallback: search by tag
-  const fallback = await audiusFetch(
+  const yt = await youtubeSearch(tag, limit);
+  if (yt.length > 0) return yt;
+  const au = await audiusFetch(
     `/v1/tracks/search?query=${encodeURIComponent(tag)}&limit=${limit}`,
   );
-  return fallback.map(mapAudius);
+  return au.map(mapAudius);
 }
 
 export async function topTracks(limit = 30): Promise<Track[]> {
-  const tracks = await audiusFetch(`/v1/tracks/trending?limit=${limit}`);
-  if (tracks.length) return tracks.map(mapAudius);
-  const fallback = await audiusFetch(
-    `/v1/tracks/search?query=${encodeURIComponent("top hits")}&limit=${limit}`,
-  );
-  return fallback.map(mapAudius);
+  const yt = await youtubeTrending(limit);
+  if (yt.length > 0) return yt;
+  const au = await audiusFetch(`/v1/tracks/trending?limit=${limit}`);
+  return au.map(mapAudius);
 }
 
-export async function fetchLyrics(artist: string, title: string): Promise<string | null> {
+// ---------- Lyrics (synced) ----------
+
+export interface LyricLine { time: number; text: string }
+export interface LyricsResult {
+  plain: string | null;
+  synced: LyricLine[] | null;
+}
+
+const parseLrc = (lrc: string): LyricLine[] => {
+  const lines: LyricLine[] = [];
+  for (const raw of lrc.split(/\r?\n/)) {
+    const matches = [...raw.matchAll(/\[(\d+):(\d+(?:\.\d+)?)\]/g)];
+    if (!matches.length) continue;
+    const text = raw.replace(/\[\d+:\d+(?:\.\d+)?\]/g, "").trim();
+    for (const m of matches) {
+      const min = parseInt(m[1], 10);
+      const sec = parseFloat(m[2]);
+      lines.push({ time: min * 60 + sec, text });
+    }
+  }
+  return lines.sort((a, b) => a.time - b.time);
+};
+
+export async function fetchLyrics(
+  artist: string,
+  title: string,
+  duration?: number,
+): Promise<LyricsResult> {
+  // Clean up YouTube-style titles like "Song Name (Official Video) [HD]"
+  const cleanTitle = title
+    .replace(/\([^)]*\)/g, "")
+    .replace(/\[[^\]]*\]/g, "")
+    .replace(/\b(official|video|audio|lyric|lyrics|hd|4k|mv|m\/v)\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  const cleanArtist = artist
+    .replace(/\s*-\s*topic$/i, "")
+    .replace(/vevo$/i, "")
+    .trim();
+
+  // Try LRCLIB (synced lyrics, free, CORS-enabled)
+  try {
+    const params = new URLSearchParams({
+      artist_name: cleanArtist,
+      track_name: cleanTitle,
+    });
+    if (duration && duration > 0) params.set("duration", String(Math.round(duration)));
+    const res = await fetch(`https://lrclib.net/api/get?${params.toString()}`);
+    if (res.ok) {
+      const data = await res.json();
+      const synced = data.syncedLyrics ? parseLrc(data.syncedLyrics) : null;
+      const plain = data.plainLyrics || (synced ? synced.map((l) => l.text).join("\n") : null);
+      if (synced || plain) return { synced, plain };
+    }
+  } catch {
+    /* ignore */
+  }
+
+  // Fallback: search LRCLIB by query
   try {
     const res = await fetch(
-      `https://api.lyrics.ovh/v1/${encodeURIComponent(artist)}/${encodeURIComponent(title)}`,
+      `https://lrclib.net/api/search?q=${encodeURIComponent(`${cleanArtist} ${cleanTitle}`)}`,
     );
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data.lyrics || null;
+    if (res.ok) {
+      const arr = await res.json();
+      if (Array.isArray(arr) && arr.length > 0) {
+        const hit = arr[0];
+        const synced = hit.syncedLyrics ? parseLrc(hit.syncedLyrics) : null;
+        const plain = hit.plainLyrics || (synced ? synced.map((l: LyricLine) => l.text).join("\n") : null);
+        if (synced || plain) return { synced, plain };
+      }
+    }
   } catch {
-    return null;
+    /* ignore */
   }
+
+  // Final fallback: lyrics.ovh (plain only)
+  try {
+    const res = await fetch(
+      `https://api.lyrics.ovh/v1/${encodeURIComponent(cleanArtist)}/${encodeURIComponent(cleanTitle)}`,
+    );
+    if (res.ok) {
+      const data = await res.json();
+      if (data.lyrics) return { plain: data.lyrics, synced: null };
+    }
+  } catch {
+    /* ignore */
+  }
+
+  return { plain: null, synced: null };
 }
