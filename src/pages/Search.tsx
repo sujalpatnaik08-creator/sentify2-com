@@ -426,23 +426,52 @@ const Search = () => {
                     </button>
                   </td>
                   <td className="py-2 px-2">
-                    <button
-                      onClick={() => onDownload(t)}
-                      disabled={isDownloadingNow}
-                      className={cn(
-                        "opacity-0 group-hover:opacity-100 transition-opacity",
-                        dl && "opacity-100 text-primary",
-                        isDownloadingNow && "opacity-100 text-muted-foreground",
-                      )}
-                      aria-label={dl ? "Remove download" : "Download"}
-                      title={t.source === "youtube" ? "YouTube tracks are stream-only" : dl ? "Saved offline" : "Save offline"}
-                    >
-                      {isDownloadingNow
-                        ? <Loader2 className="w-4 h-4 animate-spin" />
-                        : dl
-                          ? <Check className="w-4 h-4" />
-                          : <Download className="w-4 h-4" />}
-                    </button>
+                    {isDownloadingNow ? (
+                      <div className="flex items-center gap-2 min-w-[110px]">
+                        <Progress value={progress[t.id] ?? 0} className="h-1.5 flex-1" />
+                        <span className="text-[10px] tabular-nums text-muted-foreground w-8 text-right">
+                          {progress[t.id] ?? 0}%
+                        </span>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); cancelDownload(t.id); }}
+                          className="text-muted-foreground hover:text-destructive shrink-0"
+                          aria-label="Cancel download"
+                          title="Cancel download"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ) : dl ? (
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); playOfflineTrack(t); }}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary/15 text-primary border border-primary/30 hover:bg-primary/25 transition-colors"
+                          aria-label="Play offline"
+                          title="Play from offline copy"
+                        >
+                          <WifiOff className="w-3 h-3" />
+                          Play offline
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onDownload(t); }}
+                          className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                          aria-label="Remove download"
+                          title="Remove download"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onDownload(t); }}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
+                        aria-label="Download"
+                        title={t.source === "youtube" ? "YouTube tracks are stream-only" : "Save offline"}
+                        disabled={t.source === "youtube"}
+                      >
+                        <Download className="w-4 h-4" />
+                      </button>
+                    )}
                   </td>
                   <td className="py-2 px-2">
                     <button
