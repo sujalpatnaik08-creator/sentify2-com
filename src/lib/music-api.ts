@@ -22,7 +22,7 @@ const mapDeezer = (t: DeezerTrack): Track => ({
   artwork: t.album?.cover_big || t.album?.cover_medium || "/placeholder.svg",
   audioUrl: t.preview,
   duration: t.duration,
-  source: "deezer" as never,
+  source: "deezer",
 });
 
 const proxied = (url: string) => `${CORS_PROXY}${encodeURIComponent(url)}`;
