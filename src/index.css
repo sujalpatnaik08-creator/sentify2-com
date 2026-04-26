@@ -47,6 +47,7 @@
     --gradient-mood-romance: linear-gradient(135deg, hsl(340 80% 60%), hsl(0 70% 55%));
     --gradient-mood-sleep: linear-gradient(135deg, hsl(230 50% 25%), hsl(260 40% 20%));
     --gradient-hero: radial-gradient(ellipse at top, hsl(141 76% 48% / 0.25), transparent 60%), radial-gradient(ellipse at bottom, hsl(280 70% 55% / 0.2), transparent 60%);
+    --gradient-bright: radial-gradient(ellipse at 20% 20%, hsl(45 100% 65% / 0.45), transparent 55%), radial-gradient(ellipse at 80% 30%, hsl(320 90% 65% / 0.4), transparent 55%), radial-gradient(ellipse at 50% 100%, hsl(195 90% 60% / 0.45), transparent 60%), linear-gradient(135deg, hsl(280 80% 25%), hsl(220 70% 30%) 50%, hsl(180 70% 28%));
 
     --shadow-glow: 0 0 40px hsl(141 76% 48% / 0.4);
     --shadow-card: 0 8px 32px hsl(0 0% 0% / 0.4);
