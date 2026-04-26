@@ -1,92 +1,79 @@
 import type { Track } from "@/types/music";
+import { supabase } from "@/integrations/supabase/client";
 
 // =============================================================================
 // Music sources
 // =============================================================================
 // Sentify uses TWO sources, all free, no API key, CORS-enabled, FULL-LENGTH:
-//   1. YouTube (via Piped public instances) — primary source, has every
-//      Bollywood/Hollywood/global song. Full-length. Played via YouTube IFrame.
-//   2. Audius — fallback for indie/electronic catalog.
+//   1. YouTube — primary source, has every Bollywood/Hollywood/global song.
+//      Searched server-side via the `yt-search` edge function (avoids the CORS
+//      and IP blocks that kill public Piped/Invidious instances). Played
+//      full-length via the YouTube IFrame player.
+//   2. Audius — fallback for indie/electronic catalog when YouTube fails.
 // =============================================================================
-
-const PIPED_INSTANCES = [
-  "https://pipedapi.kavin.rocks",
-  "https://pipedapi.adminforge.de",
-  "https://api-piped.mha.fi",
-  "https://pipedapi.reallyaweso.me",
-];
 
 const AUDIUS_HOST = "https://discoveryprovider.audius.co";
 const APP_NAME = "sentify";
 
-// ---------- YouTube via Piped ----------
+// ---------- YouTube (server-side via edge function) ----------
 
-interface PipedItem {
-  type?: string;
-  url?: string;        // "/watch?v=XXXX"
-  title?: string;
-  thumbnail?: string;
-  uploaderName?: string;
-  uploader?: string;
-  duration?: number;
+interface YtItem {
+  id: string;
+  title: string;
+  artist: string;
+  thumbnail: string;
+  duration: number;
 }
 
-const ytIdFromUrl = (url?: string): string | null => {
-  if (!url) return null;
-  const m = url.match(/[?&]v=([\w-]{11})/);
-  return m ? m[1] : null;
-};
-
-const mapPiped = (item: PipedItem): Track | null => {
-  const id = ytIdFromUrl(item.url);
-  if (!id || !item.title) return null;
-  return {
-    id: `yt-${id}`,
-    title: item.title,
-    artist: item.uploaderName || item.uploader || "YouTube",
-    album: "",
-    artwork:
-      item.thumbnail ||
-      `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
-    audioUrl: id, // store youtube video id
-    duration: item.duration && item.duration > 0 ? item.duration : 0,
-    source: "youtube",
-  };
-};
-
-async function pipedFetch(path: string): Promise<PipedItem[]> {
-  for (const host of PIPED_INSTANCES) {
-    try {
-      const res = await fetch(`${host}${path}`);
-      if (!res.ok) continue;
-      const data = await res.json();
-      // search returns { items: [...] }, trending returns array directly
-      if (Array.isArray(data)) return data;
-      if (Array.isArray(data.items)) return data.items;
-      return [];
-    } catch {
-      continue;
-    }
-  }
-  return [];
-}
+const mapYt = (item: YtItem): Track => ({
+  id: `yt-${item.id}`,
+  title: item.title,
+  artist: item.artist || "YouTube",
+  album: "",
+  artwork: item.thumbnail || `https://i.ytimg.com/vi/${item.id}/hqdefault.jpg`,
+  audioUrl: item.id, // store youtube video id; PlayerBar plays via IFrame
+  duration: item.duration > 0 ? item.duration : 0,
+  source: "youtube",
+});
 
 async function youtubeSearch(query: string, limit: number): Promise<Track[]> {
-  const items = await pipedFetch(
-    `/search?q=${encodeURIComponent(query)}&filter=music_songs`,
-  );
-  const tracks: Track[] = [];
-  for (const it of items) {
-    if (it.type && it.type !== "stream") continue;
-    const t = mapPiped(it);
-    if (t) tracks.push(t);
-    if (tracks.length >= limit) break;
+  try {
+    const { data, error } = await supabase.functions.invoke("yt-search", {
+      body: null,
+      method: "GET",
+      headers: {},
+      // pass query via URL params
+    } as never);
+    // The supabase-js invoke helper doesn't expose query string for GET easily;
+    // fall through to direct fetch for reliability.
+    if (!error && data?.items?.length) {
+      return (data.items as YtItem[]).slice(0, limit).map(mapYt);
+    }
+  } catch {
+    /* fall through to direct fetch below */
   }
-  return tracks;
+
+  // Direct fetch — reliable and supports query params cleanly
+  try {
+    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/yt-search?q=${encodeURIComponent(
+      query,
+    )}&limit=${limit}`;
+    const res = await fetch(url, {
+      headers: {
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      },
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (!Array.isArray(data?.items)) return [];
+    return (data.items as YtItem[]).slice(0, limit).map(mapYt);
+  } catch {
+    return [];
+  }
 }
 
 async function youtubeTrending(limit: number): Promise<Track[]> {
-  // Piped trending isn't music-filtered, so search popular charts instead.
   return youtubeSearch("top hits 2024", limit);
 }
 
