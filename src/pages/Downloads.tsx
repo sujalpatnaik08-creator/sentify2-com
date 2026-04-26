@@ -74,10 +74,6 @@ const Downloads = () => {
             <Download className="w-8 h-8 text-primary" />
             Downloads
           </h1>
-          <p className="text-muted-foreground max-w-xl">
-            Save songs to your device and play them with no internet.
-            Audius tracks can be saved here. (YouTube tracks are stream-only by their terms of service.)
-          </p>
         </div>
         <div className="flex items-center gap-3">
           <span
