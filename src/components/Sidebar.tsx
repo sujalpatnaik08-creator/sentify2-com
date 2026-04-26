@@ -11,6 +11,7 @@ import {
   LogOut,
   PlayCircle,
   Heart,
+  Download,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -22,6 +23,7 @@ const main: Item[] = [
   { to: "/", icon: Home, label: "Home" },
   { to: "/search", icon: Search, label: "Search" },
   { to: "/library", icon: Library, label: "Your Library" },
+  { to: "/downloads", icon: Download, label: "Downloads" },
 ];
 
 const yourMusic: Item[] = [
@@ -37,7 +39,8 @@ export const Sidebar = () => {
   const { user, signOut } = useAuth();
 
   const renderItem = (it: Item) => {
-    const active = loc.pathname + loc.search === it.to;
+    const active = loc.pathname + loc.search === it.to ||
+      (it.to === "/downloads" && loc.pathname === "/downloads");
     return (
       <Link
         key={it.to}

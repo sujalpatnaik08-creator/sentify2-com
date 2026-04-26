@@ -247,6 +247,25 @@ export async function searchAll(query: string, limit = 40): Promise<SearchResult
   throw new Error("Music service is unreachable. Please try again.");
 }
 
+// Paginated search for infinite-scroll. Since the YouTube scrape gives us
+// one page at a time, we widen the request and slice client-side. We keep
+// the page size capped at 50 (the edge function's hard limit). For pages
+// beyond the first we vary the query slightly to surface fresh results.
+export async function searchPage(
+  query: string,
+  page: number,
+  pageSize = 30,
+): Promise<SearchResults> {
+  if (!query.trim()) return { tracks: [], artists: [], playlists: [] };
+  // Page 0 → vanilla query. Page n>0 → mix in genre/year hints to coax
+  // different results out of the scraper without changing user intent.
+  const VARIANTS = ["", "songs", "best of", "official", "live", "remix", "playlist", "album"];
+  const v = VARIANTS[page % VARIANTS.length];
+  const q = v ? `${query} ${v}` : query;
+  const limit = Math.min(50, pageSize + 10);
+  return await youtubeSearchAll(q, limit);
+}
+
 export async function searchTracks(query: string, limit = 30): Promise<Track[]> {
   if (!query.trim()) return [];
   const yt = await youtubeSearchVideos(query, limit);

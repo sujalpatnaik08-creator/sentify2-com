@@ -145,7 +145,10 @@ const Library = () => {
             setFavoriteArtists(arts);
             setFavArtistsState(arts);
           }}
-          onSearchArtist={(name) => navigate(`/search?q=${encodeURIComponent(name)}`)}
+          onSearchArtist={(name, thumb, id) => {
+            const params = new URLSearchParams({ name, ...(thumb ? { thumb } : {}) });
+            navigate(`/artist/${encodeURIComponent(id || name)}?${params.toString()}`);
+          }}
         />
       )}
 
@@ -314,7 +317,7 @@ const ArtistsView = ({
 }: {
   favArtists: FavArtist[];
   onSave: (a: FavArtist[]) => void;
-  onSearchArtist: (name: string) => void;
+  onSearchArtist: (name: string, thumb?: string, id?: string) => void;
 }) => {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ArtistResult[]>([]);
@@ -361,7 +364,7 @@ const ArtistsView = ({
           <div className="flex flex-wrap gap-4">
             {favArtists.map((a) => (
               <div key={a.id} className="relative group">
-                <button onClick={() => onSearchArtist(a.name)} className="flex flex-col items-center gap-2">
+                <button onClick={() => onSearchArtist(a.name, a.thumbnail, a.id)} className="flex flex-col items-center gap-2">
                   <img src={a.thumbnail} alt={a.name} className="w-24 h-24 rounded-full object-cover shadow-lg"
                     onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")} />
                   <span className="text-sm font-semibold max-w-[120px] truncate">{a.name}</span>

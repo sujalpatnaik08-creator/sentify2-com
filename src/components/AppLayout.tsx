@@ -16,14 +16,8 @@ export const AppLayout = ({ children }: { children: ReactNode }) => {
         <TopBar />
         <main className="flex-1">{children}</main>
       </div>
-      {showLyrics && (
-        <LyricsPanel
-          onClose={() => setShowLyrics(false)}
-        />
-      )}
-      {showQueue && (
-        <QueuePanel onClose={() => setShowQueue(false)} />
-      )}
+      {showLyrics && <LyricsPanel onClose={() => setShowLyrics(false)} />}
+      {showQueue && <QueuePanel onClose={() => setShowQueue(false)} />}
       <PlayerBar
         onToggleLyrics={() => {
           setShowLyrics((v) => !v);
