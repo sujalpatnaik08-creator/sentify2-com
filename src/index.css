@@ -6,38 +6,38 @@
 
 @layer base {
   :root {
-    --background: 0 0% 7%;
+    --background: 240 25% 6%;
     --foreground: 0 0% 98%;
 
-    --card: 0 0% 10%;
+    --card: 240 22% 10%;
     --card-foreground: 0 0% 98%;
 
-    --popover: 0 0% 10%;
+    --popover: 240 22% 10%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: 346 84% 58%;
+    --primary: 320 95% 62%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 346 90% 68%;
+    --primary-glow: 320 100% 72%;
 
-    --secondary: 0 0% 14%;
+    --secondary: 240 20% 14%;
     --secondary-foreground: 0 0% 98%;
 
-    --muted: 0 0% 14%;
-    --muted-foreground: 0 0% 65%;
+    --muted: 240 18% 16%;
+    --muted-foreground: 240 10% 70%;
 
-    --accent: 280 70% 55%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 195 100% 55%;
+    --accent-foreground: 240 30% 8%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 0 0% 18%;
-    --input: 0 0% 14%;
-    --ring: 346 84% 58%;
+    --border: 240 20% 20%;
+    --input: 240 20% 16%;
+    --ring: 320 95% 62%;
 
-    --radius: 0.75rem;
+    --radius: 0.85rem;
 
-    --gradient-primary: linear-gradient(135deg, hsl(346 84% 58%), hsl(320 80% 55%));
+    --gradient-primary: linear-gradient(135deg, hsl(320 95% 62%), hsl(265 90% 65%) 50%, hsl(195 100% 55%));
     --gradient-mood-happy: linear-gradient(135deg, hsl(45 100% 60%), hsl(20 100% 55%));
     --gradient-mood-chill: linear-gradient(135deg, hsl(200 80% 55%), hsl(240 70% 60%));
     --gradient-mood-focus: linear-gradient(135deg, hsl(260 60% 55%), hsl(220 70% 50%));
