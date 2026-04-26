@@ -58,10 +58,13 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-4" style={{ background: "var(--gradient-hero)" }}>
-      <div className="absolute inset-0 opacity-60">
+    <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-4" style={{ background: "var(--gradient-bright)" }}>
+      <div className="absolute inset-0">
         <HeroOrb />
       </div>
+      <div className="absolute top-10 -left-20 w-72 h-72 rounded-full bg-accent/40 blur-3xl animate-pulse" />
+      <div className="absolute bottom-10 -right-20 w-80 h-80 rounded-full bg-primary/40 blur-3xl animate-pulse" style={{ animationDelay: "1s" }} />
+      <div className="absolute top-1/2 left-1/3 w-64 h-64 rounded-full bg-pink-400/30 blur-3xl animate-pulse" style={{ animationDelay: "2s" }} />
 
       <Card className="relative z-10 w-full max-w-md p-8 glass border-border/50 animate-scale-in">
         <div className="flex items-center justify-center gap-3 mb-6">
