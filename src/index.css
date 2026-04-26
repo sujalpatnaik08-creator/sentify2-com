@@ -6,38 +6,38 @@
 
 @layer base {
   :root {
-    --background: 240 25% 6%;
-    --foreground: 0 0% 98%;
+    --background: 0 0% 7%;
+    --foreground: 0 0% 100%;
 
-    --card: 240 22% 10%;
-    --card-foreground: 0 0% 98%;
+    --card: 0 0% 10%;
+    --card-foreground: 0 0% 100%;
 
-    --popover: 240 22% 10%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 100%;
 
-    --primary: 320 95% 62%;
-    --primary-foreground: 0 0% 100%;
-    --primary-glow: 320 100% 72%;
+    --primary: 141 76% 48%;
+    --primary-foreground: 0 0% 0%;
+    --primary-glow: 141 80% 58%;
 
-    --secondary: 240 20% 14%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 0 0% 14%;
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 240 18% 16%;
-    --muted-foreground: 240 10% 70%;
+    --muted: 0 0% 16%;
+    --muted-foreground: 0 0% 70%;
 
-    --accent: 195 100% 55%;
-    --accent-foreground: 240 30% 8%;
+    --accent: 141 76% 48%;
+    --accent-foreground: 0 0% 0%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 240 20% 20%;
-    --input: 240 20% 16%;
-    --ring: 320 95% 62%;
+    --border: 0 0% 18%;
+    --input: 0 0% 16%;
+    --ring: 141 76% 48%;
 
-    --radius: 0.85rem;
+    --radius: 0.5rem;
 
-    --gradient-primary: linear-gradient(135deg, hsl(320 95% 62%), hsl(265 90% 65%) 50%, hsl(195 100% 55%));
+    --gradient-primary: linear-gradient(135deg, hsl(141 76% 48%), hsl(141 80% 38%));
     --gradient-mood-happy: linear-gradient(135deg, hsl(45 100% 60%), hsl(20 100% 55%));
     --gradient-mood-chill: linear-gradient(135deg, hsl(200 80% 55%), hsl(240 70% 60%));
     --gradient-mood-focus: linear-gradient(135deg, hsl(260 60% 55%), hsl(220 70% 50%));
@@ -46,28 +46,28 @@
     --gradient-mood-party: linear-gradient(135deg, hsl(320 90% 60%), hsl(280 90% 55%));
     --gradient-mood-romance: linear-gradient(135deg, hsl(340 80% 60%), hsl(0 70% 55%));
     --gradient-mood-sleep: linear-gradient(135deg, hsl(230 50% 25%), hsl(260 40% 20%));
-    --gradient-hero: radial-gradient(ellipse at 15% 10%, hsl(320 95% 60% / 0.55), transparent 55%), radial-gradient(ellipse at 85% 20%, hsl(45 100% 65% / 0.4), transparent 55%), radial-gradient(ellipse at 50% 100%, hsl(195 100% 55% / 0.5), transparent 60%), linear-gradient(135deg, hsl(265 80% 22%), hsl(220 70% 28%) 50%, hsl(180 70% 30%));
-    --gradient-bright: radial-gradient(ellipse at 20% 20%, hsl(45 100% 65% / 0.45), transparent 55%), radial-gradient(ellipse at 80% 30%, hsl(320 90% 65% / 0.4), transparent 55%), radial-gradient(ellipse at 50% 100%, hsl(195 90% 60% / 0.45), transparent 60%), linear-gradient(135deg, hsl(280 80% 25%), hsl(220 70% 30%) 50%, hsl(180 70% 28%));
+    --gradient-hero: linear-gradient(180deg, hsl(141 60% 25%), hsl(0 0% 7%) 70%);
+    --gradient-bright: linear-gradient(180deg, hsl(141 50% 30%), hsl(0 0% 7%) 70%);
 
-    --shadow-glow: 0 0 50px hsl(320 95% 62% / 0.5);
-    --shadow-card: 0 10px 40px hsl(265 60% 5% / 0.5);
-    --shadow-elegant: 0 20px 60px -10px hsl(320 90% 50% / 0.45);
+    --shadow-glow: 0 8px 24px hsl(141 76% 48% / 0.35);
+    --shadow-card: 0 8px 24px hsl(0 0% 0% / 0.5);
+    --shadow-elegant: 0 16px 40px -8px hsl(0 0% 0% / 0.6);
 
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
-    --sidebar-background: 240 28% 5%;
-    --sidebar-foreground: 240 10% 78%;
-    --sidebar-primary: 320 95% 62%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 22% 12%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 240 22% 14%;
-    --sidebar-ring: 320 95% 62%;
+    --sidebar-background: 0 0% 0%;
+    --sidebar-foreground: 0 0% 70%;
+    --sidebar-primary: 141 76% 48%;
+    --sidebar-primary-foreground: 0 0% 0%;
+    --sidebar-accent: 0 0% 12%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 0 0% 14%;
+    --sidebar-ring: 141 76% 48%;
   }
 
   .dark {
-    --background: 240 25% 6%;
-    --foreground: 0 0% 98%;
+    --background: 0 0% 7%;
+    --foreground: 0 0% 100%;
   }
 }
 
@@ -76,11 +76,6 @@
   body {
     @apply bg-background text-foreground;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    background-image:
-      radial-gradient(ellipse 80% 60% at 0% 0%, hsl(320 80% 35% / 0.18), transparent 60%),
-      radial-gradient(ellipse 70% 50% at 100% 10%, hsl(195 90% 45% / 0.14), transparent 60%),
-      radial-gradient(ellipse 60% 40% at 50% 100%, hsl(265 80% 40% / 0.16), transparent 60%);
-    background-attachment: fixed;
   }
 }
 
