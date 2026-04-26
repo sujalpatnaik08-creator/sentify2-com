@@ -234,12 +234,33 @@ const Search = () => {
   };
 
   // ---------- Per-track download ----------
+  const cancelDownload = (id: string) => {
+    const ctrl = abortersRef.current.get(id);
+    ctrl?.abort();
+  };
+
+  const playOfflineTrack = async (track: Track) => {
+    const blob = await getDownloadedBlob(track.id);
+    if (!blob) {
+      toast.error("Offline copy missing");
+      return;
+    }
+    const objectUrl = URL.createObjectURL(blob);
+    playTrack({ ...track, audioUrl: objectUrl }, filteredTracks);
+  };
+
   const onDownload = async (track: Track) => {
+    // Already downloading -> cancel
+    if (downloading.has(track.id)) {
+      cancelDownload(track.id);
+      return;
+    }
     if (downloads.has(track.id)) {
       await removeDownload(track.id);
       setDownloads((s) => {
         const n = new Set(s); n.delete(track.id); return n;
       });
+      setProgress((p) => { const n = { ...p }; delete n[track.id]; return n; });
       toast.success("Removed from downloads");
       return;
     }
@@ -247,14 +268,31 @@ const Search = () => {
       toast.error("YouTube tracks can only be streamed live (ToS).");
       return;
     }
+    const ctrl = new AbortController();
+    abortersRef.current.set(track.id, ctrl);
     setDownloading((s) => new Set(s).add(track.id));
+    setProgress((p) => ({ ...p, [track.id]: 0 }));
     try {
-      await downloadTrack(track);
+      await downloadTrack(
+        track,
+        (loaded, total) => {
+          const pct = total > 0 ? Math.min(99, Math.round((loaded / total) * 100)) : 0;
+          setProgress((p) => ({ ...p, [track.id]: pct }));
+        },
+        ctrl.signal,
+      );
       setDownloads((s) => new Set(s).add(track.id));
+      setProgress((p) => ({ ...p, [track.id]: 100 }));
       toast.success(`"${track.title}" saved for offline`);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Download failed");
+      if (e instanceof DownloadCancelledError) {
+        toast.info("Download cancelled");
+      } else {
+        toast.error(e instanceof Error ? e.message : "Download failed");
+      }
+      setProgress((p) => { const n = { ...p }; delete n[track.id]; return n; });
     } finally {
+      abortersRef.current.delete(track.id);
       setDownloading((s) => {
         const n = new Set(s); n.delete(track.id); return n;
       });
