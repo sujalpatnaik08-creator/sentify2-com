@@ -118,6 +118,8 @@ const Search = () => {
   // Per-track download state
   const [downloads, setDownloads] = useState<Set<string>>(new Set());
   const [downloading, setDownloading] = useState<Set<string>>(new Set());
+  const [progress, setProgress] = useState<Record<string, number>>({}); // 0-100
+  const abortersRef = useRef<Map<string, AbortController>>(new Map());
 
   const { current, isPlaying, playTrack, togglePlay } = usePlayer();
 
