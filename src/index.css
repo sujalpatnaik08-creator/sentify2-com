@@ -76,14 +76,20 @@
   body {
     @apply bg-background text-foreground;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background-image:
+      radial-gradient(ellipse 80% 60% at 0% 0%, hsl(320 80% 35% / 0.18), transparent 60%),
+      radial-gradient(ellipse 70% 50% at 100% 10%, hsl(195 90% 45% / 0.14), transparent 60%),
+      radial-gradient(ellipse 60% 40% at 50% 100%, hsl(265 80% 40% / 0.16), transparent 60%);
+    background-attachment: fixed;
   }
 }
 
 @layer utilities {
   .glass {
-    background: hsl(0 0% 10% / 0.7);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    background: hsl(240 22% 10% / 0.65);
+    backdrop-filter: blur(24px) saturate(160%);
+    -webkit-backdrop-filter: blur(24px) saturate(160%);
+    border: 1px solid hsl(0 0% 100% / 0.06);
   }
   .text-gradient {
     background: var(--gradient-primary);
@@ -91,6 +97,9 @@
     background-clip: text;
     -webkit-text-fill-color: transparent;
   }
+  .bg-gradient-primary { background: var(--gradient-primary); }
+  .shadow-glow { box-shadow: var(--shadow-glow); }
+  .shadow-elegant { box-shadow: var(--shadow-elegant); }
   .scrollbar-hide::-webkit-scrollbar { display: none; }
   .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 }
