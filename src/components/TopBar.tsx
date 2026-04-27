@@ -25,6 +25,9 @@ export const TopBar = () => {
   const [perf, setPerf] = useState(getPerfMode());
   const [listening, setListening] = useState(false);
   const recognitionRef = (typeof window !== "undefined" ? (window as any) : {}) as any;
+  const speechSupported =
+    typeof window !== "undefined" &&
+    !!((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
 
   // Sync from URL when on /search
   useEffect(() => {
