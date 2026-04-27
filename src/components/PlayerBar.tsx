@@ -86,9 +86,6 @@ export const PlayerBar = ({ onToggleLyrics, onToggleQueue, showLyrics, showQueue
         {/* Controls */}
         <div className="flex flex-col items-center gap-1">
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={toggleShuffle} className={cn("h-8 w-8", shuffle && "text-primary")} aria-label="Shuffle">
-              <Shuffle className="w-4 h-4" />
-            </Button>
             <Button variant="ghost" size="icon" onClick={prev} className="h-8 w-8" aria-label="Previous">
               <SkipBack className="w-4 h-4 fill-current" />
             </Button>
@@ -102,9 +99,6 @@ export const PlayerBar = ({ onToggleLyrics, onToggleQueue, showLyrics, showQueue
             </Button>
             <Button variant="ghost" size="icon" onClick={next} className="h-8 w-8" aria-label="Next">
               <SkipForward className="w-4 h-4 fill-current" />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={cycleRepeat} className={cn("h-8 w-8", repeat !== "off" && "text-primary")} aria-label="Repeat">
-              {repeat === "one" ? <Repeat1 className="w-4 h-4" /> : <Repeat className="w-4 h-4" />}
             </Button>
           </div>
           <div className="flex items-center gap-2 w-full max-w-xl">

@@ -387,26 +387,42 @@ export const LyricsPanel = ({ onClose }: { onClose: () => void }) => {
           </div>
         ) : mode === "synced" && hasSynced ? (
           <div className="space-y-3 pb-12">
-            {displaySynced!.map((line, i) => (
-              <div
-                key={i}
-                ref={i === activeIdx ? activeLineRef : null}
-                onClick={() => onLineClick(line.time)}
-                onWheel={() => setAutoScroll(false)}
-                role="button"
-                tabIndex={0}
-                className={cn(
-                  "transition-all duration-300 leading-relaxed cursor-pointer rounded px-1 whitespace-pre-line",
-                  i === activeIdx
-                    ? "text-primary font-semibold text-lg scale-[1.02]"
-                    : i < activeIdx
-                      ? "text-muted-foreground/60 text-base hover:text-foreground"
-                      : "text-foreground/70 text-base hover:text-foreground",
-                )}
-              >
-                {line.text || "♪"}
-              </div>
-            ))}
+            {displaySynced!.map((line, i) => {
+              const isActive = i === activeIdx;
+              const nextTime =
+                i + 1 < displaySynced!.length ? displaySynced![i + 1].time : (duration || line.time + 4);
+              const span = Math.max(0.25, nextTime - line.time);
+              const frac = isActive ? Math.min(1, Math.max(0, (progress - line.time) / span)) : 0;
+              return (
+                <div
+                  key={i}
+                  ref={isActive ? activeLineRef : null}
+                  onClick={() => onLineClick(line.time)}
+                  onWheel={() => setAutoScroll(false)}
+                  role="button"
+                  tabIndex={0}
+                  title="Click to seek to this line"
+                  className={cn(
+                    "transition-all duration-300 leading-relaxed cursor-pointer rounded px-1 whitespace-pre-line",
+                    isActive
+                      ? "text-primary font-semibold text-lg scale-[1.02]"
+                      : i < activeIdx
+                        ? "text-muted-foreground/60 text-base hover:text-foreground"
+                        : "text-foreground/70 text-base hover:text-foreground",
+                  )}
+                >
+                  {line.text || "♪"}
+                  {isActive && (
+                    <div className="mt-1 h-0.5 w-full bg-primary/15 rounded overflow-hidden">
+                      <div
+                        className="h-full bg-primary transition-[width] duration-200 ease-linear"
+                        style={{ width: `${frac * 100}%` }}
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         ) : mode === "plain" && hasPlain ? (
           <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-foreground/90">
