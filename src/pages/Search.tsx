@@ -864,20 +864,24 @@ const Search = () => {
             </>
           )}
 
-          {/* Infinite-scroll sentinel */}
-          {hasMore && (
-            <div ref={sentinelRef} className="flex justify-center py-8">
-              {loadingMore ? (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Loading more…
-                </div>
-              ) : (
-                <span className="text-xs text-muted-foreground">Scroll for more</span>
-              )}
+          {/* Spotify-style explicit "Load more" — only on tabs that paginate */}
+          {tab !== "all" && hasMore && (
+            <div className="flex justify-center py-8">
+              <Button
+                variant="outline"
+                onClick={loadMore}
+                disabled={loadingMore}
+                className="rounded-full px-6 gap-2 font-semibold"
+              >
+                {loadingMore ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Loading…</>
+                ) : (
+                  <>Load more</>
+                )}
+              </Button>
             </div>
           )}
-          {!hasMore && tracks.length > 0 && (
+          {tab !== "all" && !hasMore && tracks.length > 0 && (
             <p className="text-center text-xs text-muted-foreground py-8">
               You've reached the end · {tracks.length} tracks
             </p>
