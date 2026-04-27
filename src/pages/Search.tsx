@@ -153,7 +153,8 @@ const Search = () => {
   }, []);
 
   useEffect(() => {
-    const id = setTimeout(() => runSearch(q), 350);
+    // Spotify-like snappy search: 180ms debounce
+    const id = setTimeout(() => runSearch(q), 180);
     return () => clearTimeout(id);
   }, [q, attempt, runSearch]);
 
