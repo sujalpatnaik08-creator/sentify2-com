@@ -51,6 +51,7 @@ import { Progress } from "@/components/ui/progress";
 import { X, WifiOff } from "lucide-react";
 
 const SUGGESTIONS = ["Daylight", "Arijit Singh", "Coldplay", "Lo-fi", "Taylor Swift", "Khuda Jaane"];
+// Spotify search tab order: All, Songs, Artists, Albums, Playlists, Profiles
 const TABS = [
   { id: "all", label: "All", icon: Music2 },
   { id: "songs", label: "Songs", icon: Music2 },
