@@ -1,4 +1,5 @@
-import { LogIn, LogOut, Moon, Search as SearchIcon, Sun, User, Zap } from "lucide-react";
+import { LogIn, LogOut, Mic, MicOff, Moon, Search as SearchIcon, Sun, User, Zap } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
