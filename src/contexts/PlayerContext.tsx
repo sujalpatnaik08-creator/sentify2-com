@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState, ReactNode, useCallback } from "react";
 import type { Track } from "@/types/music";
-import { addRecentlyPlayed, isValidYouTubeId } from "@/lib/user-prefs";
+import { addRecentlyPlayed, isValidYouTubeId, getPerfMode } from "@/lib/user-prefs";
 
 interface PlayerContextValue {
   current: Track | null;
@@ -69,21 +69,41 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   // ----- Audio element for Audius streams -----
   useEffect(() => {
     const audio = new Audio();
-    audio.preload = "metadata";
+    // Performance Mode: aggressively preload entire track for instant seek.
+    audio.preload = getPerfMode() ? "auto" : "metadata";
     audioRef.current = audio;
 
-    const onTime = () => setProgress(audio.currentTime);
+    // Throttle timeupdate -> setProgress to 4Hz to cut React renders ~75%.
+    let lastTick = 0;
+    const onTime = () => {
+      const now = performance.now();
+      if (now - lastTick < 250) return;
+      lastTick = now;
+      setProgress(audio.currentTime);
+    };
     const onMeta = () => setDuration(audio.duration || 0);
     const onEnd = () => handleEndRef.current?.();
     const onPlay = () => setIsPlaying(true);
     const onPause = () => setIsPlaying(false);
+    const onError = () => {
+      // Try to skip to next track on hard playback error so the UI doesn't stall.
+      console.warn("Audio playback error", audio.error);
+      handleEndRef.current?.();
+    };
 
     audio.addEventListener("timeupdate", onTime);
     audio.addEventListener("loadedmetadata", onMeta);
     audio.addEventListener("ended", onEnd);
     audio.addEventListener("play", onPlay);
     audio.addEventListener("pause", onPause);
+    audio.addEventListener("error", onError);
     audio.volume = volume;
+
+    const onPerfChange = (e: Event) => {
+      const on = (e as CustomEvent<boolean>).detail;
+      audio.preload = on ? "auto" : "metadata";
+    };
+    window.addEventListener("sentify:perf-mode", onPerfChange);
 
     return () => {
       audio.pause();
@@ -92,6 +112,8 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       audio.removeEventListener("ended", onEnd);
       audio.removeEventListener("play", onPlay);
       audio.removeEventListener("pause", onPause);
+      audio.removeEventListener("error", onError);
+      window.removeEventListener("sentify:perf-mode", onPerfChange);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
