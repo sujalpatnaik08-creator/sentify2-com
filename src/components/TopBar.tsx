@@ -1,9 +1,9 @@
-import { LogIn, LogOut, Moon, Search as SearchIcon, Sun, User } from "lucide-react";
+import { LogIn, LogOut, Moon, Search as SearchIcon, Sun, User, Zap } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { addSearchHistory } from "@/lib/user-prefs";
+import { addSearchHistory, getPerfMode, setPerfMode } from "@/lib/user-prefs";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import {
