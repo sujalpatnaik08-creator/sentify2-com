@@ -670,6 +670,11 @@ class PlaybackEngine {
   setAutoplayContinuity(on: boolean) {
     usePlayerStore.getState()._set({ autoplayContinuity: on });
   }
+  setEnhancer(preset: EnhancerPreset) {
+    usePlayerStore.getState()._set({ enhancer: preset });
+    this.ensureCtx();
+    this.applyEnhancer(preset);
+  }
 
   // ------- Internals -------
   private handleEnd() {
