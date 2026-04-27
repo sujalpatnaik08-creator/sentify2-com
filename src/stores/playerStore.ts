@@ -5,7 +5,6 @@
 
 import { create } from "zustand";
 import type { Track } from "@/types/music";
-import type { EnhancerPreset } from "@/lib/user-prefs";
 
 export type RepeatMode = "off" | "all" | "one";
 
@@ -23,7 +22,6 @@ export interface PlayerState {
   crossfadeSec: number;       // 0 = off, default 5
   normalize: boolean;         // ReplayGain-style ~-14 LUFS target
   autoplayContinuity: boolean; // auto-fetch similar tracks when queue ends
-  enhancer: EnhancerPreset;   // automated audio enhancer preset
 
   // setters used by the engine
   _set: (patch: Partial<PlayerState>) => void;
@@ -44,7 +42,6 @@ export const usePlayerStore = create<PlayerState>((set) => ({
   crossfadeSec: 5,
   normalize: true,
   autoplayContinuity: true,
-  enhancer: "auto",
 
   _set: (patch) => set(patch),
   _setQueue: (q) => set({ queue: q }),

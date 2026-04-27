@@ -8,9 +8,6 @@ import {
   setCrossfadeSec,
   setNormalize,
   setAutoplayContinuity,
-  getEnhancerPreset,
-  setEnhancerPreset,
-  type EnhancerPreset,
 } from "@/lib/user-prefs";
 import type { Track } from "@/types/music";
 
@@ -21,8 +18,6 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     engine.setCrossfade(getCrossfadeSec());
     engine.setNormalize(getNormalize());
     engine.setAutoplayContinuity(getAutoplayContinuity());
-    // Hydrate enhancer last (also seeds the store)
-    usePlayerStore.getState()._set({ enhancer: getEnhancerPreset() });
   }, []);
 
   return (
@@ -50,7 +45,6 @@ export function usePlayer() {
   const crossfadeSec = usePlayerStore((s) => s.crossfadeSec);
   const normalize = usePlayerStore((s) => s.normalize);
   const autoplayContinuity = usePlayerStore((s) => s.autoplayContinuity);
-  const enhancer = usePlayerStore((s) => s.enhancer);
 
   // Stable action handles.
   const actions = useMemo(() => {
@@ -69,13 +63,12 @@ export function usePlayer() {
       setCrossfade: (sec: number) => { setCrossfadeSec(sec); engine.setCrossfade(sec); },
       setNormalize: (on: boolean) => { setNormalize(on); engine.setNormalize(on); },
       setAutoplayContinuity: (on: boolean) => { setAutoplayContinuity(on); engine.setAutoplayContinuity(on); },
-      setEnhancer: (p: EnhancerPreset) => { setEnhancerPreset(p); engine.setEnhancer(p); },
     };
   }, []);
 
   return {
     current, queue, history, isPlaying, progress, duration, volume,
-    shuffle, repeat, crossfadeSec, normalize, autoplayContinuity, enhancer,
+    shuffle, repeat, crossfadeSec, normalize, autoplayContinuity,
     ...actions,
   };
 }

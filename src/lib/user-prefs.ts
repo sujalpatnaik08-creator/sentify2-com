@@ -13,19 +13,7 @@ const K = {
   crossfade: "sentify_crossfade_sec",  // number 0..12
   normalize: "sentify_normalize",      // "1" | "0"
   autoplay: "sentify_autoplay_cont",   // "1" | "0"
-  enhancer: "sentify_enhancer_preset", // EnhancerPreset
 };
-
-export type EnhancerPreset = "off" | "auto" | "vocal" | "bass" | "cinema" | "podcast";
-export function getEnhancerPreset(): EnhancerPreset {
-  try {
-    const v = (localStorage.getItem(K.enhancer) || "auto") as EnhancerPreset;
-    return ["off","auto","vocal","bass","cinema","podcast"].includes(v) ? v : "auto";
-  } catch { return "auto"; }
-}
-export function setEnhancerPreset(p: EnhancerPreset) {
-  try { localStorage.setItem(K.enhancer, p); } catch { /* */ }
-}
 
 // ---------- Spotify-style playback prefs ----------
 export function getCrossfadeSec(): number {
