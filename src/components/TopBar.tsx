@@ -23,6 +23,8 @@ export const TopBar = () => {
   const { user, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [perf, setPerf] = useState(getPerfMode());
+  const [listening, setListening] = useState(false);
+  const recognitionRef = (typeof window !== "undefined" ? (window as any) : {}) as any;
 
   // Sync from URL when on /search
   useEffect(() => {
