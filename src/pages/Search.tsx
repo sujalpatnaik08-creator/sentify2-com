@@ -51,6 +51,7 @@ import { Progress } from "@/components/ui/progress";
 import { X, WifiOff } from "lucide-react";
 
 const SUGGESTIONS = ["Daylight", "Arijit Singh", "Coldplay", "Lo-fi", "Taylor Swift", "Khuda Jaane"];
+// Spotify search tab order: All, Songs, Artists, Albums, Playlists, Profiles
 const TABS = [
   { id: "all", label: "All", icon: Music2 },
   { id: "songs", label: "Songs", icon: Music2 },
@@ -123,7 +124,7 @@ const Search = () => {
 
   const { current, isPlaying, playTrack, togglePlay } = usePlayer();
 
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  // (sentinelRef removed — using explicit "Show more" button instead)
 
   // ---------- Initial / re-search ----------
   const runSearch = useCallback(async (query: string) => {
@@ -190,18 +191,8 @@ const Search = () => {
     }
   }, [q, page, tracks, artists, playlists, loading, loadingMore, hasMore]);
 
-  useEffect(() => {
-    if (!sentinelRef.current) return;
-    const el = sentinelRef.current;
-    const obs = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting) loadMore();
-      },
-      { rootMargin: "400px" },
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [loadMore]);
+  // Spotify uses an explicit "Show more" button rather than auto-load. The
+  // sentinel ref is intentionally unused (kept for future opt-in scroll mode).
 
   const retry = () => setAttempt((n) => n + 1);
 
@@ -607,89 +598,178 @@ const Search = () => {
     </div>
   );
 
+  // Spotify "All" tab: hero Top Result + Songs (4 rows) side-by-side, then
+  // horizontal Artists / Albums / Playlists carousels with "Show all" links.
   const renderAll = () => {
     const top = filteredTracks[0];
+    const topLang = top ? detectLanguage(`${top.title} ${top.artist}`) : null;
     return (
       <div className="space-y-10">
+        {/* Top result + Songs preview */}
         {top && (
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="bg-card/40 rounded-xl p-5 hover:bg-card/70 transition-colors group">
-              <div className="text-sm text-muted-foreground mb-3">Top result</div>
-              <img
-                src={top.artwork}
-                alt={top.title}
-                className="w-32 h-32 rounded-md object-cover shadow-xl mb-4"
-                onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")}
-              />
-              <h2 className="text-2xl font-bold truncate">{top.title}</h2>
-              <p className="text-muted-foreground truncate mb-2">{top.artist}</p>
-              <Badge className={cn("mb-4", LANG_COLORS[detectLanguage(`${top.title} ${top.artist}`)])} variant="outline">
-                {LANG_LABEL[detectLanguage(`${top.title} ${top.artist}`)]}
-              </Badge>
-              <div>
-                <Button onClick={() => handleRowPlay(top)} className="rounded-full gap-2">
+          <div className="grid lg:grid-cols-5 gap-6">
+            {/* Top result hero (Spotify uses a 2/5 column on desktop) */}
+            <section className="lg:col-span-2">
+              <h2 className="text-2xl font-bold mb-4">Top result</h2>
+              <div
+                onClick={() => handleRowPlay(top)}
+                className="group relative bg-card/50 hover:bg-card rounded-lg p-5 cursor-pointer transition-colors"
+              >
+                <img
+                  src={top.artwork}
+                  alt={top.title}
+                  className="w-24 h-24 rounded-md object-cover shadow-xl mb-5"
+                  onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")}
+                />
+                <h3 className="text-3xl font-bold truncate mb-2">{top.title}</h3>
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-muted-foreground truncate">{top.artist}</span>
+                  <span className="px-2 py-0.5 rounded-full bg-secondary text-foreground/80 text-[11px] font-semibold uppercase tracking-wide">Song</span>
+                  {topLang && (
+                    <span className={cn("inline-flex items-center px-2 py-0.5 rounded-full border text-[10px] font-medium", LANG_COLORS[topLang])}>
+                      {LANG_LABEL[topLang]}
+                    </span>
+                  )}
+                </div>
+                {/* Floating play button — appears on hover, Spotify-style */}
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleRowPlay(top); }}
+                  className="absolute bottom-5 right-5 h-12 w-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all"
+                  aria-label={current?.id === top.id && isPlaying ? "Pause" : "Play"}
+                >
                   {current?.id === top.id && isPlaying
-                    ? <><Pause className="w-4 h-4 fill-current" /> Pause</>
-                    : <><Play className="w-4 h-4 fill-current" /> Play</>}
-                </Button>
+                    ? <Pause className="w-5 h-5 fill-current" />
+                    : <Play className="w-5 h-5 fill-current ml-0.5" />}
+                </button>
               </div>
-            </div>
-            <div>
-              <div className="text-sm text-muted-foreground mb-3 px-2">Tracks</div>
-              {renderTracksTable(filteredTracks.slice(1, 5))}
-            </div>
+            </section>
+
+            {/* Songs preview (4 rows) */}
+            <section className="lg:col-span-3">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-2xl font-bold">Songs</h2>
+                <button
+                  onClick={() => setTab("songs")}
+                  className="text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Show all
+                </button>
+              </div>
+              {renderTracksTable(filteredTracks.slice(0, 4))}
+            </section>
           </div>
         )}
 
+        {/* Artists row */}
         {artists.length > 0 && (
           <section>
-            <h3 className="text-xl font-bold mb-4">Artists</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-              {artists.slice(0, 5).map((a) => (
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold">Artists</h2>
+              <button
+                onClick={() => setTab("artists")}
+                className="text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Show all
+              </button>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {artists.slice(0, 6).map((a) => (
                 <button
                   key={a.id}
                   onClick={() => goToArtist(a)}
-                  className="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-card/60 transition-colors text-center"
+                  className="flex flex-col items-center gap-3 p-4 rounded-lg bg-card/40 hover:bg-card transition-colors text-center"
                 >
-                  <img src={a.thumbnail} alt={a.name} className="w-24 h-24 rounded-full object-cover shadow-lg"
-                    onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")} />
-                  <div className="text-sm font-semibold truncate w-full">{a.name}</div>
-                  <div className="text-xs text-muted-foreground truncate w-full">{a.subscribers || "Artist"}</div>
+                  <img
+                    src={a.thumbnail}
+                    alt={a.name}
+                    className="w-full aspect-square rounded-full object-cover shadow-lg"
+                    onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")}
+                  />
+                  <div className="min-w-0 w-full">
+                    <div className="font-semibold truncate">{a.name}</div>
+                    <div className="text-xs text-muted-foreground truncate">Artist</div>
+                  </div>
                 </button>
               ))}
             </div>
           </section>
         )}
 
+        {/* Albums row */}
+        {albums.length > 0 && (
+          <section>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold">Albums</h2>
+              <button
+                onClick={() => setTab("albums")}
+                className="text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Show all
+              </button>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {albums.slice(0, 6).map((al) => {
+                const albumTracks = filteredTracks.filter(
+                  (t) => (t.album?.trim() || t.title) === al.name && t.artist === al.artist,
+                );
+                return (
+                  <button
+                    key={`${al.name}-${al.artist}`}
+                    onClick={() => albumTracks[0] && playTrack(albumTracks[0], albumTracks)}
+                    className="flex flex-col gap-3 p-3 rounded-lg bg-card/40 hover:bg-card transition-colors text-left"
+                  >
+                    <img
+                      src={al.artwork}
+                      alt={al.name}
+                      className="w-full aspect-square rounded-md object-cover shadow-lg"
+                      onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")}
+                    />
+                    <div className="min-w-0">
+                      <div className="font-semibold truncate">{al.name}</div>
+                      <div className="text-xs text-muted-foreground truncate">{al.artist}</div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* Playlists row */}
         {playlists.length > 0 && (
           <section>
-            <h3 className="text-xl font-bold mb-4">Playlists</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-              {playlists.slice(0, 5).map((p) => (
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold">Playlists</h2>
+              <button
+                onClick={() => setTab("playlists")}
+                className="text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Show all
+              </button>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {playlists.slice(0, 6).map((p) => (
                 <button
                   key={p.id}
                   onClick={() => navigate(`/search?q=${encodeURIComponent(p.title)}`)}
-                  className="flex flex-col gap-2 p-3 rounded-lg hover:bg-card/60 transition-colors text-left"
+                  className="flex flex-col gap-3 p-3 rounded-lg bg-card/40 hover:bg-card transition-colors text-left"
                 >
                   <div className="relative w-full aspect-square rounded-md overflow-hidden shadow-lg bg-muted">
                     <img src={p.thumbnail} alt={p.title} className="w-full h-full object-cover"
                       onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")} />
                     <div className="absolute bottom-1.5 right-1.5 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded">
-                      {p.videoCount}
+                      {p.videoCount} tracks
                     </div>
                   </div>
-                  <div className="text-sm font-semibold truncate">{p.title}</div>
-                  <div className="text-xs text-muted-foreground truncate">{p.author || "Playlist"}</div>
+                  <div className="min-w-0">
+                    <div className="font-semibold truncate">{p.title}</div>
+                    <div className="text-xs text-muted-foreground truncate">{p.author || "Playlist"}</div>
+                  </div>
                 </button>
               ))}
             </div>
           </section>
         )}
-
-        <section>
-          <h3 className="text-xl font-bold mb-4">More songs</h3>
-          {renderTracksTable(filteredTracks.slice(5))}
-        </section>
       </div>
     );
   };
@@ -873,20 +953,24 @@ const Search = () => {
             </>
           )}
 
-          {/* Infinite-scroll sentinel */}
-          {hasMore && (
-            <div ref={sentinelRef} className="flex justify-center py-8">
-              {loadingMore ? (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Loading more…
-                </div>
-              ) : (
-                <span className="text-xs text-muted-foreground">Scroll for more</span>
-              )}
+          {/* Spotify-style explicit "Load more" — only on tabs that paginate */}
+          {tab !== "all" && hasMore && (
+            <div className="flex justify-center py-8">
+              <Button
+                variant="outline"
+                onClick={loadMore}
+                disabled={loadingMore}
+                className="rounded-full px-6 gap-2 font-semibold"
+              >
+                {loadingMore ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Loading…</>
+                ) : (
+                  <>Load more</>
+                )}
+              </Button>
             </div>
           )}
-          {!hasMore && tracks.length > 0 && (
+          {tab !== "all" && !hasMore && tracks.length > 0 && (
             <p className="text-center text-xs text-muted-foreground py-8">
               You've reached the end · {tracks.length} tracks
             </p>
