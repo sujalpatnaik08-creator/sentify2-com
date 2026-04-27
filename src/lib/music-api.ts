@@ -347,13 +347,19 @@ export async function fetchLyrics(
   const cleanTitle = title
     .replace(/\([^)]*\)/g, "")
     .replace(/\[[^\]]*\]/g, "")
-    .replace(/\b(official|video|audio|lyric|lyrics|hd|4k|mv|m\/v)\b/gi, "")
+    .replace(/\b(official|video|audio|lyric|lyrics|hd|4k|mv|m\/v|full song|full video|status|whatsapp|new|latest)\b/gi, "")
     .replace(/\s+/g, " ")
     .trim();
   const cleanArtist = artist
     .replace(/\s*-\s*topic$/i, "")
     .replace(/vevo$/i, "")
     .trim();
+
+  // Strip leading "Artist -" prefix some YT titles use
+  const titleNoArtist = cleanTitle.replace(
+    new RegExp(`^${cleanArtist.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*[-:|]\\s*`, "i"),
+    "",
+  ).trim();
 
   // 1. LRCLIB exact (synced)
   try {
@@ -371,12 +377,20 @@ export async function fetchLyrics(
     }
   } catch { /* ignore */ }
 
-  // 2. LRCLIB search
-  try {
-    const res = await fetch(
-      `https://lrclib.net/api/search?q=${encodeURIComponent(`${cleanArtist} ${cleanTitle}`)}`,
-    );
-    if (res.ok) {
+  // 2. LRCLIB search — try several query variants. Critical for regional /
+  // devotional content (Bhajans, Odia, Bhojpuri) where artist tagging is messy.
+  const variants = Array.from(new Set([
+    `${cleanArtist} ${cleanTitle}`,
+    cleanTitle,
+    titleNoArtist,
+    `${titleNoArtist} ${cleanArtist}`,
+    cleanTitle.split(/[-|:(]/)[0].trim(), // first segment only
+  ].filter((s) => s && s.length > 1)));
+
+  for (const v of variants) {
+    try {
+      const res = await fetch(`https://lrclib.net/api/search?q=${encodeURIComponent(v)}`);
+      if (!res.ok) continue;
       const arr = await res.json();
       if (Array.isArray(arr) && arr.length > 0) {
         const hit = arr[0];
@@ -384,19 +398,22 @@ export async function fetchLyrics(
         const plain = hit.plainLyrics || (synced ? synced.map((l: LyricLine) => l.text).join("\n") : null);
         if (synced || plain) return { synced, plain };
       }
-    }
-  } catch { /* ignore */ }
+    } catch { /* ignore */ }
+  }
 
-  // 3. lyrics.ovh (plain only)
-  try {
-    const res = await fetch(
-      `https://api.lyrics.ovh/v1/${encodeURIComponent(cleanArtist)}/${encodeURIComponent(cleanTitle)}`,
-    );
-    if (res.ok) {
-      const data = await res.json();
-      if (data.lyrics) return { plain: data.lyrics, synced: null };
-    }
-  } catch { /* ignore */ }
+  // 3. lyrics.ovh (plain only) — try with cleaned title and bare title
+  for (const t of [cleanTitle, titleNoArtist]) {
+    if (!t) continue;
+    try {
+      const res = await fetch(
+        `https://api.lyrics.ovh/v1/${encodeURIComponent(cleanArtist)}/${encodeURIComponent(t)}`,
+      );
+      if (res.ok) {
+        const data = await res.json();
+        if (data.lyrics) return { plain: data.lyrics, synced: null };
+      }
+    } catch { /* ignore */ }
+  }
 
   return { plain: null, synced: null };
 }
