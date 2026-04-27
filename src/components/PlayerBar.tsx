@@ -47,6 +47,7 @@ export const PlayerBar = ({ onToggleLyrics, onToggleQueue, showLyrics, showQueue
     crossfadeSec,
     normalize,
     autoplayContinuity,
+    enhancer,
     togglePlay,
     next,
     prev,
@@ -57,6 +58,7 @@ export const PlayerBar = ({ onToggleLyrics, onToggleQueue, showLyrics, showQueue
     setCrossfade,
     setNormalize,
     setAutoplayContinuity,
+    setEnhancer,
   } = usePlayer();
   const [muted, setMuted] = useState(false);
 
@@ -203,6 +205,27 @@ export const PlayerBar = ({ onToggleLyrics, onToggleQueue, showLyrics, showQueue
                     <p className="text-[10px] text-muted-foreground">When the queue ends</p>
                   </div>
                   <Switch id="auto" checked={autoplayContinuity} onCheckedChange={setAutoplayContinuity} />
+                </div>
+                <div className="space-y-2 pt-1 border-t border-border/50">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs">Audio Enhancer</Label>
+                    <span className="text-[10px] text-muted-foreground capitalize">{enhancer}</span>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">EQ + compressor + stereo widener + reverb</p>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {(["off","auto","vocal","bass","cinema","podcast"] as const).map((p) => (
+                      <Button
+                        key={p}
+                        type="button"
+                        size="sm"
+                        variant={enhancer === p ? "default" : "outline"}
+                        className="h-7 text-[11px] capitalize"
+                        onClick={() => setEnhancer(p)}
+                      >
+                        {p}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </PopoverContent>
