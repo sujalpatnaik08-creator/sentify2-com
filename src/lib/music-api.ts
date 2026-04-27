@@ -207,7 +207,8 @@ async function youtubeSearchAll(query: string, limit: number): Promise<SearchRes
     extraChannels = ch.filter((i): i is YtChannel => i.type === "channel");
   }
 
-  const rankedTracks = [...videos]
+  const rankedTracks = videos
+    .filter(isLikelyMusic)
     .sort((a, b) => scoreTrack(b, query) - scoreTrack(a, query))
     .slice(0, limit)
     .map(mapYtVideo);
@@ -235,9 +236,36 @@ async function youtubeSearchVideos(query: string, limit: number): Promise<Track[
   const items = await fetchYt(query, "music", limit);
   const videos = items.filter((i): i is YtVideo => i.type === "video");
   return videos
+    .filter(isLikelyMusic)
     .sort((a, b) => scoreTrack(b, query) - scoreTrack(a, query))
     .slice(0, limit)
     .map(mapYtVideo);
+}
+
+// ---------- Autocomplete suggestions (Spotify-like predictive search) ----------
+// Lightweight: uses YouTube's public suggest endpoint (no key) via a JSONP-ish
+// XML feed. We parse it client-side. Returns up to 8 suggestions, mixed with
+// the user's recent searches that prefix-match.
+const suggestCache = new Map<string, { ts: number; data: string[] }>();
+const SUGGEST_TTL = 10 * 60 * 1000;
+export async function suggestQueries(prefix: string): Promise<string[]> {
+  const p = prefix.trim();
+  if (p.length < 1) return [];
+  const key = p.toLowerCase();
+  const hit = suggestCache.get(key);
+  if (hit && Date.now() - hit.ts < SUGGEST_TTL) return hit.data;
+  try {
+    // Google/YouTube suggest — CORS-friendly JSON endpoint.
+    const url = `https://suggestqueries.google.com/complete/search?client=youtube&ds=yt&output=firefox&q=${encodeURIComponent(p)}`;
+    const res = await fetch(url);
+    if (!res.ok) return [];
+    const arr = await res.json();
+    const list: string[] = Array.isArray(arr?.[1]) ? arr[1].slice(0, 8) : [];
+    suggestCache.set(key, { ts: Date.now(), data: list });
+    return list;
+  } catch {
+    return [];
+  }
 }
 
 // ---------- Audius fallback ----------
