@@ -100,16 +100,52 @@ const mapYtVideo = (item: YtVideo): Track => ({
   source: "youtube",
 });
 
-// Smart ranking: blends popularity (views) with a duration sweet-spot
-// (most songs are 2.5–5 min). Pure-views ranking buries good tracks behind
-// joke uploads, so we apply a soft Gaussian-ish weight around 210s.
-const scoreTrack = (v: YtVideo): number => {
+// Smart ranking: blends popularity (views), a duration sweet-spot
+// (most songs are 2.5–5 min), and **query-relevance** so when the user types
+// a specific spelling/word/title, the matching track surfaces at the top
+// (Spotify-like). Pure popularity buries the actual song behind joke uploads.
+const norm = (s: string) =>
+  s.toLowerCase().replace(/[\u2018\u2019\u201C\u201D'’"`]/g, "").replace(/[^a-z0-9\s\u0900-\u097F\u0600-\u06FF\uAC00-\uD7AF\u3040-\u30FF\u4E00-\u9FFF]/g, " ").replace(/\s+/g, " ").trim();
+
+const tokens = (s: string) => norm(s).split(" ").filter(Boolean);
+
+const relevanceScore = (q: string, v: YtVideo): number => {
+  const query = norm(q);
+  if (!query) return 0;
+  const title = norm(v.title);
+  const artist = norm(v.artist || "");
+  const hay = `${title} ${artist}`;
+
+  let r = 0;
+  if (title === query) r += 12;            // exact title match
+  if (title.startsWith(query)) r += 6;     // prefix match
+  if (title.includes(query)) r += 4;       // substring in title
+  if (artist === query) r += 5;            // exact artist match
+  if (artist.includes(query)) r += 2;
+  if (hay.includes(query)) r += 1;
+
+  // token coverage — what fraction of query tokens appear in title+artist?
+  const qTokens = tokens(q);
+  if (qTokens.length > 0) {
+    const matched = qTokens.filter((t) => hay.includes(t)).length;
+    r += (matched / qTokens.length) * 4;
+    if (matched === qTokens.length) r += 2; // all tokens present
+  }
+
+  // Penalize obvious non-song noise
+  if (/\b(reaction|review|tutorial|cover guitar|how to)\b/i.test(v.title)) r -= 3;
+  return r;
+};
+
+const scoreTrack = (v: YtVideo, q = ""): number => {
   const views = Math.max(1, v.views);
   const popularityScore = Math.log10(views); // 0..10
   const ideal = 210; // 3:30
   const deltaMin = Math.abs(v.duration - ideal) / 60; // minutes off
   const durationScore = Math.exp(-(deltaMin * deltaMin) / 8); // 0..1
-  return popularityScore * (0.5 + 0.5 * durationScore);
+  // Relevance dominates when the user typed a specific query.
+  const rel = relevanceScore(q, v);
+  return rel * 3 + popularityScore * (0.5 + 0.5 * durationScore);
 };
 
 async function fetchYt(
