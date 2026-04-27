@@ -10,7 +10,33 @@ const K = {
   played: "sentify_recently_played",   // Track[]
   favArtists: "sentify_fav_artists",   // {id,name,thumbnail}[]
   perfMode: "sentify_perf_mode",       // "1" | "0"
+  crossfade: "sentify_crossfade_sec",  // number 0..12
+  normalize: "sentify_normalize",      // "1" | "0"
+  autoplay: "sentify_autoplay_cont",   // "1" | "0"
 };
+
+// ---------- Spotify-style playback prefs ----------
+export function getCrossfadeSec(): number {
+  try {
+    const v = parseInt(localStorage.getItem(K.crossfade) || "5", 10);
+    return isFinite(v) && v >= 0 && v <= 12 ? v : 5;
+  } catch { return 5; }
+}
+export function setCrossfadeSec(sec: number) {
+  try { localStorage.setItem(K.crossfade, String(Math.max(0, Math.min(12, Math.round(sec))))); } catch { /* */ }
+}
+export function getNormalize(): boolean {
+  try { return localStorage.getItem(K.normalize) !== "0"; } catch { return true; }
+}
+export function setNormalize(on: boolean) {
+  try { localStorage.setItem(K.normalize, on ? "1" : "0"); } catch { /* */ }
+}
+export function getAutoplayContinuity(): boolean {
+  try { return localStorage.getItem(K.autoplay) !== "0"; } catch { return true; }
+}
+export function setAutoplayContinuity(on: boolean) {
+  try { localStorage.setItem(K.autoplay, on ? "1" : "0"); } catch { /* */ }
+}
 
 // ---------- Performance Mode ----------
 // When ON: aggressive audio preloading, faster polling, fewer re-renders.

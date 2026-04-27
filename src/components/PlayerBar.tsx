@@ -12,8 +12,12 @@ import {
   VolumeX,
   Mic2,
   ListMusic,
+  Settings2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 
@@ -40,6 +44,9 @@ export const PlayerBar = ({ onToggleLyrics, onToggleQueue, showLyrics, showQueue
     volume,
     shuffle,
     repeat,
+    crossfadeSec,
+    normalize,
+    autoplayContinuity,
     togglePlay,
     next,
     prev,
@@ -47,6 +54,9 @@ export const PlayerBar = ({ onToggleLyrics, onToggleQueue, showLyrics, showQueue
     setVolume,
     toggleShuffle,
     cycleRepeat,
+    setCrossfade,
+    setNormalize,
+    setAutoplayContinuity,
   } = usePlayer();
   const [muted, setMuted] = useState(false);
 
@@ -131,6 +141,45 @@ export const PlayerBar = ({ onToggleLyrics, onToggleQueue, showLyrics, showQueue
           >
             <ListMusic className="w-4 h-4" />
           </Button>
+
+          {/* Spotify-style playback settings: crossfade / normalize / autoplay */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Playback settings">
+                <Settings2 className="w-4 h-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-72">
+              <div className="space-y-4">
+                <h4 className="font-semibold text-sm">Playback</h4>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="xf" className="text-xs">Crossfade</Label>
+                    <span className="text-xs text-muted-foreground tabular-nums">
+                      {crossfadeSec === 0 ? "Off" : `${crossfadeSec}s`}
+                    </span>
+                  </div>
+                  <Slider id="xf" value={[crossfadeSec]} min={0} max={12} step={1}
+                    onValueChange={(v) => setCrossfade(v[0])} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="norm" className="text-xs">Audio normalization</Label>
+                    <p className="text-[10px] text-muted-foreground">~−14 LUFS target</p>
+                  </div>
+                  <Switch id="norm" checked={normalize} onCheckedChange={setNormalize} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="auto" className="text-xs">Autoplay similar songs</Label>
+                    <p className="text-[10px] text-muted-foreground">When the queue ends</p>
+                  </div>
+                  <Switch id="auto" checked={autoplayContinuity} onCheckedChange={setAutoplayContinuity} />
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+
           <Button
             variant="ghost"
             size="icon"

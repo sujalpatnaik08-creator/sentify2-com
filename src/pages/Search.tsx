@@ -93,7 +93,10 @@ const initialLikedSet = (): Set<string> => new Set(getLikedTracks().map((t) => t
 const Search = () => {
   const loc = useLocation();
   const navigate = useNavigate();
-  const q = new URLSearchParams(loc.search).get("q") || "";
+  const params = new URLSearchParams(loc.search);
+  const q = params.get("q") || "";
+  const urlType = (params.get("type") || "all") as Tab;
+  const initialTab: Tab = (TABS.find((t) => t.id === urlType)?.id ?? "all") as Tab;
 
   const [tracks, setTracks] = useState<Track[]>([]);
   const [artists, setArtists] = useState<ArtistResult[]>([]);
@@ -104,11 +107,27 @@ const Search = () => {
   const [page, setPage] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
-  const [tab, setTab] = useState<Tab>("all");
+  const [tab, setTabState] = useState<Tab>(initialTab);
   const [langFilter, setLangFilter] = useState<Language | "all">("all");
   const [liked, setLiked] = useState<Set<string>>(initialLikedSet);
   const [showDebug, setShowDebug] = useState(false);
   const [lastDuration, setLastDuration] = useState<number>(0);
+
+  // Keep tab + URL ?type= in sync (Spotify-style shareable filter URLs).
+  const setTab = useCallback((next: Tab) => {
+    setTabState(next);
+    const sp = new URLSearchParams(loc.search);
+    if (next === "all") sp.delete("type");
+    else sp.set("type", next);
+    navigate({ pathname: loc.pathname, search: sp.toString() }, { replace: true });
+  }, [loc.pathname, loc.search, navigate]);
+
+  // External URL changes (e.g. browser back) → resync tab state.
+  useEffect(() => {
+    const t = (new URLSearchParams(loc.search).get("type") || "all") as Tab;
+    if (TABS.some((x) => x.id === t) && t !== tab) setTabState(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loc.search]);
 
   // Per-track expanded lyrics state
   const [openLyrics, setOpenLyrics] = useState<string | null>(null);
