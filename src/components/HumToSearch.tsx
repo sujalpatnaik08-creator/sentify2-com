@@ -111,8 +111,8 @@ export const HumToSearch = () => {
     if (!m?.searchQuery) return null;
     let tracks: Track[] = [];
     try {
-      const res = await searchTracks(m.searchQuery, { limit: 4 });
-      tracks = res.tracks.slice(0, 4);
+      const res = await searchTracks(m.searchQuery, 4);
+      tracks = res.slice(0, 4);
     } catch { /* keep match without tracks */ }
     return {
       title: m.title,
