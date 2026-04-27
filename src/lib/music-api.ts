@@ -137,6 +137,18 @@ const relevanceScore = (q: string, v: YtVideo): number => {
   return r;
 };
 
+// Audio-only / content filter: drop podcasts, interviews, vlogs, gameplay,
+// trailers, news clips, and other non-music uploads. Keeps the catalog
+// focused strictly on songs/music (Spotify-like).
+const NON_MUSIC_RE = /\b(podcast|interview|vlog|news|gameplay|walkthrough|trailer|teaser|movie clip|full movie|episode\s*\d|ep\.?\s*\d+|press conference|behind the scenes|making of|documentary|reaction|tutorial|how to|unboxing|prank|comedy sketch|stand[- ]up|asmr|sleep meditation|guided meditation|white noise|10 hours|loop \d+ hours)\b/i;
+const isLikelyMusic = (v: YtVideo): boolean => {
+  if (NON_MUSIC_RE.test(v.title)) return false;
+  // Songs are typically 1.5–10 min. Strip very long uploads (likely mixes/podcasts).
+  if (v.duration > 900) return false;
+  if (v.duration > 0 && v.duration < 45) return false;
+  return true;
+};
+
 const scoreTrack = (v: YtVideo, q = ""): number => {
   const views = Math.max(1, v.views);
   const popularityScore = Math.log10(views); // 0..10
