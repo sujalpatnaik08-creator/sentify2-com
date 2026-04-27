@@ -67,12 +67,17 @@ export const TopBar = () => {
           type="button"
           variant="ghost"
           size="icon"
-          onClick={() => {
+          disabled={!speechSupported}
+          onClick={async () => {
             const SR: any =
               (window as any).SpeechRecognition ||
               (window as any).webkitSpeechRecognition;
             if (!SR) {
-              toast({ title: "Voice search unavailable", description: "Your browser does not support speech recognition." });
+              toast({
+                title: "Voice search not supported",
+                description:
+                  "Your browser doesn't support speech recognition. Try Chrome, Edge, or Safari — meanwhile you can type your search.",
+              });
               return;
             }
             if (listening && recognitionRef._sr) {
@@ -80,6 +85,24 @@ export const TopBar = () => {
               setListening(false);
               return;
             }
+
+            // Permission prompt: explicitly request mic so the browser shows
+            // its native permission dialog before we start recognition.
+            try {
+              if (navigator.mediaDevices?.getUserMedia) {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                // Immediately stop tracks — SpeechRecognition manages its own stream.
+                stream.getTracks().forEach((t) => t.stop());
+              }
+            } catch {
+              toast({
+                title: "Microphone blocked",
+                description:
+                  "Allow microphone access in your browser to use voice search. You can still type your query.",
+              });
+              return;
+            }
+
             const sr = new SR();
             sr.lang = navigator.language || "en-US";
             sr.interimResults = true;
@@ -87,6 +110,7 @@ export const TopBar = () => {
             sr.maxAlternatives = 1;
             recognitionRef._sr = sr;
             setListening(true);
+            toast({ title: "Listening…", description: "Speak now to search." });
             sr.onresult = (e: any) => {
               const text = Array.from(e.results)
                 .map((r: any) => r[0]?.transcript || "")
@@ -94,13 +118,38 @@ export const TopBar = () => {
                 .trim();
               if (text) onChange(text);
             };
-            sr.onerror = () => { setListening(false); };
+            sr.onerror = (e: any) => {
+              setListening(false);
+              const err = e?.error || "";
+              if (err === "not-allowed" || err === "service-not-allowed") {
+                toast({
+                  title: "Microphone blocked",
+                  description: "Enable mic permission for this site to use voice search.",
+                });
+              } else if (err === "no-speech") {
+                toast({ title: "Didn't catch that", description: "No speech detected — try again." });
+              } else if (err && err !== "aborted") {
+                toast({ title: "Voice search error", description: String(err) });
+              }
+            };
             sr.onend = () => { setListening(false); };
             try { sr.start(); } catch { setListening(false); }
           }}
-          className={`absolute right-1.5 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full ${listening ? "text-primary animate-pulse" : "text-muted-foreground"}`}
-          aria-label={listening ? "Stop voice search" : "Start voice search"}
-          title={listening ? "Listening… click to stop" : "Voice search"}
+          className={`absolute right-1.5 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full ${listening ? "text-primary animate-pulse" : "text-muted-foreground"} ${!speechSupported ? "opacity-40 cursor-not-allowed" : ""}`}
+          aria-label={
+            !speechSupported
+              ? "Voice search not supported in this browser"
+              : listening
+                ? "Stop voice search"
+                : "Start voice search"
+          }
+          title={
+            !speechSupported
+              ? "Voice search isn't supported in this browser — please type instead"
+              : listening
+                ? "Listening… click to stop"
+                : "Voice search (microphone permission required)"
+          }
         >
           {listening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
         </Button>
