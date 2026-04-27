@@ -12,6 +12,7 @@ import Downloads from "./pages/Downloads.tsx";
 import Artist from "./pages/Artist.tsx";
 import { AuthProvider } from "./contexts/AuthContext";
 import { PlayerProvider } from "./contexts/PlayerContext";
+import { ThemeProvider } from "./contexts/ThemeContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AppLayout } from "./components/AppLayout";
 
@@ -31,27 +32,29 @@ const Protected = ({ children }: { children: React.ReactNode }) => (
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <AuthProvider>
-        <PlayerProvider>
-          <BrowserRouter>
-            <Routes>
-              <Route path="/auth" element={<Auth />} />
-              {/* Home is the only public app page before sign-in */}
-              <Route path="/" element={<Public><Home /></Public>} />
-              {/* Everything else requires sign-in */}
-              <Route path="/search" element={<Protected><Search /></Protected>} />
-              <Route path="/artist/:id" element={<Protected><Artist /></Protected>} />
-              <Route path="/downloads" element={<Protected><Downloads /></Protected>} />
-              <Route path="/library" element={<Protected><Library /></Protected>} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </PlayerProvider>
-      </AuthProvider>
-    </TooltipProvider>
+    <ThemeProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <AuthProvider>
+          <PlayerProvider>
+            <BrowserRouter>
+              <Routes>
+                <Route path="/auth" element={<Auth />} />
+                {/* Home is the only public app page before sign-in */}
+                <Route path="/" element={<Public><Home /></Public>} />
+                {/* Everything else requires sign-in */}
+                <Route path="/search" element={<Protected><Search /></Protected>} />
+                <Route path="/artist/:id" element={<Protected><Artist /></Protected>} />
+                <Route path="/downloads" element={<Protected><Downloads /></Protected>} />
+                <Route path="/library" element={<Protected><Library /></Protected>} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </PlayerProvider>
+        </AuthProvider>
+      </TooltipProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 

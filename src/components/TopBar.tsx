@@ -1,10 +1,11 @@
-import { LogIn, LogOut, Search as SearchIcon, User } from "lucide-react";
+import { LogIn, LogOut, Moon, Search as SearchIcon, Sun, User } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { addSearchHistory } from "@/lib/user-prefs";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTheme } from "@/contexts/ThemeContext";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -19,6 +20,7 @@ export const TopBar = () => {
   const loc = useLocation();
   const [q, setQ] = useState("");
   const { user, signOut } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   // Sync from URL when on /search
   useEffect(() => {
@@ -56,8 +58,18 @@ export const TopBar = () => {
         />
       </div>
 
-      {/* Right: account / login */}
+      {/* Right: theme toggle + account / login */}
       <div className="ml-auto flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={toggleTheme}
+          className="rounded-full h-9 w-9 bg-secondary/60 hover:bg-secondary border border-border/50"
+          aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          title={theme === "dark" ? "Light mode" : "Dark mode"}
+        >
+          {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+        </Button>
         {user ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
