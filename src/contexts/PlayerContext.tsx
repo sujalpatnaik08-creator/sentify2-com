@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState, ReactNode, useCallback } from "react";
 import type { Track } from "@/types/music";
-import { addRecentlyPlayed, isValidYouTubeId } from "@/lib/user-prefs";
+import { addRecentlyPlayed, isValidYouTubeId, getPerfMode } from "@/lib/user-prefs";
 
 interface PlayerContextValue {
   current: Track | null;
@@ -69,21 +69,41 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   // ----- Audio element for Audius streams -----
   useEffect(() => {
     const audio = new Audio();
-    audio.preload = "metadata";
+    // Performance Mode: aggressively preload entire track for instant seek.
+    audio.preload = getPerfMode() ? "auto" : "metadata";
     audioRef.current = audio;
 
-    const onTime = () => setProgress(audio.currentTime);
+    // Throttle timeupdate -> setProgress to 4Hz to cut React renders ~75%.
+    let lastTick = 0;
+    const onTime = () => {
+      const now = performance.now();
+      if (now - lastTick < 250) return;
+      lastTick = now;
+      setProgress(audio.currentTime);
+    };
     const onMeta = () => setDuration(audio.duration || 0);
     const onEnd = () => handleEndRef.current?.();
     const onPlay = () => setIsPlaying(true);
     const onPause = () => setIsPlaying(false);
+    const onError = () => {
+      // Try to skip to next track on hard playback error so the UI doesn't stall.
+      console.warn("Audio playback error", audio.error);
+      handleEndRef.current?.();
+    };
 
     audio.addEventListener("timeupdate", onTime);
     audio.addEventListener("loadedmetadata", onMeta);
     audio.addEventListener("ended", onEnd);
     audio.addEventListener("play", onPlay);
     audio.addEventListener("pause", onPause);
+    audio.addEventListener("error", onError);
     audio.volume = volume;
+
+    const onPerfChange = (e: Event) => {
+      const on = (e as CustomEvent<boolean>).detail;
+      audio.preload = on ? "auto" : "metadata";
+    };
+    window.addEventListener("sentify:perf-mode", onPerfChange);
 
     return () => {
       audio.pause();
@@ -92,6 +112,8 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       audio.removeEventListener("ended", onEnd);
       audio.removeEventListener("play", onPlay);
       audio.removeEventListener("pause", onPause);
+      audio.removeEventListener("error", onError);
+      window.removeEventListener("sentify:perf-mode", onPerfChange);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -126,6 +148,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
               const d = ytPlayerRef.current.getDuration?.() || 0;
               setDuration(d);
               if (ytIntervalRef.current) window.clearInterval(ytIntervalRef.current);
+              // 4Hz progress poll — smooth seek bar without thrashing React.
               ytIntervalRef.current = window.setInterval(() => {
                 try {
                   setProgress(ytPlayerRef.current.getCurrentTime?.() || 0);
@@ -138,6 +161,15 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
               if (ytIntervalRef.current) window.clearInterval(ytIntervalRef.current);
               handleEndRef.current?.();
             }
+          },
+          // YT error codes 2, 5, 100, 101, 150 = bad id / unembeddable / removed.
+          // Auto-skip so the user can keep listening (Spotify-like resilience).
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          onError: (e: any) => {
+            console.warn("YouTube playback error", e?.data);
+            setIsPlaying(false);
+            if (ytIntervalRef.current) window.clearInterval(ytIntervalRef.current);
+            handleEndRef.current?.();
           },
         },
       });
@@ -273,11 +305,13 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   }, [history, current, playTrack]);
 
   const seek = (s: number) => {
+    // Optimistically update the UI before the underlying player commits the
+    // seek — keeps the slider glued to the cursor while dragging.
+    setProgress(s);
     if (current?.source === "youtube" && ytReadyRef.current) {
-      ytPlayerRef.current.seekTo(s, true);
-      setProgress(s);
+      try { ytPlayerRef.current.seekTo(s, true); } catch { /* */ }
     } else if (audioRef.current) {
-      audioRef.current.currentTime = s;
+      try { audioRef.current.currentTime = s; } catch { /* */ }
     }
   };
   const setVolume = (v: number) => {
