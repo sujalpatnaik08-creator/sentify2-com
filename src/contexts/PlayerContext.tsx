@@ -148,6 +148,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
               const d = ytPlayerRef.current.getDuration?.() || 0;
               setDuration(d);
               if (ytIntervalRef.current) window.clearInterval(ytIntervalRef.current);
+              // 4Hz progress poll — smooth seek bar without thrashing React.
               ytIntervalRef.current = window.setInterval(() => {
                 try {
                   setProgress(ytPlayerRef.current.getCurrentTime?.() || 0);
@@ -160,6 +161,15 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
               if (ytIntervalRef.current) window.clearInterval(ytIntervalRef.current);
               handleEndRef.current?.();
             }
+          },
+          // YT error codes 2, 5, 100, 101, 150 = bad id / unembeddable / removed.
+          // Auto-skip so the user can keep listening (Spotify-like resilience).
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          onError: (e: any) => {
+            console.warn("YouTube playback error", e?.data);
+            setIsPlaying(false);
+            if (ytIntervalRef.current) window.clearInterval(ytIntervalRef.current);
+            handleEndRef.current?.();
           },
         },
       });
