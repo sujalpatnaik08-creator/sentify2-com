@@ -21,6 +21,7 @@ export const TopBar = () => {
   const [q, setQ] = useState("");
   const { user, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const [perf, setPerf] = useState(getPerfMode());
 
   // Sync from URL when on /search
   useEffect(() => {
