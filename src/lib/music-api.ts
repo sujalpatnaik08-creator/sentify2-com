@@ -196,7 +196,7 @@ async function youtubeSearchAll(query: string, limit: number): Promise<SearchRes
   }
 
   const rankedTracks = [...videos]
-    .sort((a, b) => scoreTrack(b) - scoreTrack(a))
+    .sort((a, b) => scoreTrack(b, query) - scoreTrack(a, query))
     .slice(0, limit)
     .map(mapYtVideo);
 
@@ -223,7 +223,7 @@ async function youtubeSearchVideos(query: string, limit: number): Promise<Track[
   const items = await fetchYt(query, "music", limit);
   const videos = items.filter((i): i is YtVideo => i.type === "video");
   return videos
-    .sort((a, b) => scoreTrack(b) - scoreTrack(a))
+    .sort((a, b) => scoreTrack(b, query) - scoreTrack(a, query))
     .slice(0, limit)
     .map(mapYtVideo);
 }
