@@ -305,11 +305,13 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   }, [history, current, playTrack]);
 
   const seek = (s: number) => {
+    // Optimistically update the UI before the underlying player commits the
+    // seek — keeps the slider glued to the cursor while dragging.
+    setProgress(s);
     if (current?.source === "youtube" && ytReadyRef.current) {
-      ytPlayerRef.current.seekTo(s, true);
-      setProgress(s);
+      try { ytPlayerRef.current.seekTo(s, true); } catch { /* */ }
     } else if (audioRef.current) {
-      audioRef.current.currentTime = s;
+      try { audioRef.current.currentTime = s; } catch { /* */ }
     }
   };
   const setVolume = (v: number) => {
