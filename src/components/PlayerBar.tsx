@@ -123,6 +123,40 @@ export const PlayerBar = ({ onToggleLyrics, onToggleQueue, showLyrics, showQueue
 
         {/* Right controls */}
         <div className="flex items-center justify-end gap-2">
+          {/* Playback order controls (shuffle / repeat / orderly) — left of lyrics */}
+          <div className="flex items-center gap-1 mr-1 pr-2 border-r border-border/50">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleShuffle}
+              className={cn("h-8 w-8", shuffle && "text-primary")}
+              aria-label="Shuffle"
+              title={shuffle ? "Shuffle: On" : "Shuffle: Off"}
+            >
+              <Shuffle className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => { if (shuffle) toggleShuffle(); }}
+              className={cn("h-8 w-8", !shuffle && repeat === "off" && "text-primary")}
+              aria-label="Play in order"
+              title="Play in order"
+            >
+              <ListMusic className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={cycleRepeat}
+              className={cn("h-8 w-8", repeat !== "off" && "text-primary")}
+              aria-label="Repeat"
+              title={repeat === "off" ? "Repeat: Off" : repeat === "all" ? "Repeat: All" : "Repeat: One"}
+            >
+              {repeat === "one" ? <Repeat1 className="w-4 h-4" /> : <Repeat className="w-4 h-4" />}
+            </Button>
+          </div>
+
           <Button
             variant="ghost"
             size="icon"
