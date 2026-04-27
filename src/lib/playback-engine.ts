@@ -98,6 +98,21 @@ class PlaybackEngine {
   private analyser: AnalyserNode | null = null;
   private analyserActive: "A" | "B" = "A";
 
+  // Enhancer chain (shared, sits between gains and destination)
+  private enhMixer: GainNode | null = null;
+  private enhLow: BiquadFilterNode | null = null;
+  private enhMid: BiquadFilterNode | null = null;
+  private enhHigh: BiquadFilterNode | null = null;
+  private enhComp: DynamicsCompressorNode | null = null;
+  private enhSplitter: ChannelSplitterNode | null = null;
+  private enhMerger: ChannelMergerNode | null = null;
+  private enhMidGain: GainNode | null = null;   // (L+R)/2 contribution → width control
+  private enhSideGain: GainNode | null = null;  // (L-R)/2 contribution → width control
+  private enhDryGain: GainNode | null = null;
+  private enhWetGain: GainNode | null = null;
+  private enhConvolver: ConvolverNode | null = null;
+  private enhOut: GainNode | null = null;
+
   // YouTube hidden player
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private yt: any = null;
