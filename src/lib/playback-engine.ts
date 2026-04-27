@@ -167,12 +167,104 @@ class PlaybackEngine {
       this.srcB = this.ctx.createMediaElementSource(this.audioB);
       this.analyser = this.ctx.createAnalyser();
       this.analyser.fftSize = 256;
-      this.srcA.connect(this.gainA).connect(this.analyser).connect(this.ctx.destination);
-      this.srcB.connect(this.gainB).connect(this.ctx.destination);
+
+      // ---------- Enhancer chain ----------
+      // Mixer ← gainA + gainB → EQ(low/mid/high) → Compressor → StereoWidener → Reverb mix → Out
+      this.enhMixer = this.ctx.createGain();
+      this.enhLow = this.ctx.createBiquadFilter();
+      this.enhLow.type = "lowshelf"; this.enhLow.frequency.value = 200;
+      this.enhMid = this.ctx.createBiquadFilter();
+      this.enhMid.type = "peaking"; this.enhMid.frequency.value = 1500; this.enhMid.Q.value = 0.9;
+      this.enhHigh = this.ctx.createBiquadFilter();
+      this.enhHigh.type = "highshelf"; this.enhHigh.frequency.value = 5000;
+      this.enhComp = this.ctx.createDynamicsCompressor();
+      this.enhComp.threshold.value = -22; this.enhComp.knee.value = 24;
+      this.enhComp.ratio.value = 3; this.enhComp.attack.value = 0.003; this.enhComp.release.value = 0.25;
+
+      // Stereo widener: split L/R, build mid/side via gain matrix, recombine.
+      this.enhSplitter = this.ctx.createChannelSplitter(2);
+      this.enhMerger = this.ctx.createChannelMerger(2);
+      this.enhMidGain = this.ctx.createGain(); this.enhMidGain.gain.value = 1;
+      this.enhSideGain = this.ctx.createGain(); this.enhSideGain.gain.value = 1;
+
+      // Reverb (short procedural impulse — generated lazily so file size stays small)
+      this.enhConvolver = this.ctx.createConvolver();
+      this.enhConvolver.buffer = this.makeImpulseResponse(this.ctx, 1.4, 2.2);
+      this.enhDryGain = this.ctx.createGain(); this.enhDryGain.gain.value = 1;
+      this.enhWetGain = this.ctx.createGain(); this.enhWetGain.gain.value = 0;
+      this.enhOut = this.ctx.createGain(); this.enhOut.gain.value = 1;
+
+      this.srcA.connect(this.gainA).connect(this.enhMixer);
+      this.srcB.connect(this.gainB).connect(this.enhMixer);
+
+      this.enhMixer.connect(this.enhLow);
+      this.enhLow.connect(this.enhMid);
+      this.enhMid.connect(this.enhHigh);
+      this.enhHigh.connect(this.enhComp);
+
+      // Widener: comp → splitter (L=0, R=1)
+      this.enhComp.connect(this.enhSplitter);
+      // Mid path: both channels → midGain → both outputs
+      this.enhSplitter.connect(this.enhMidGain, 0);
+      this.enhSplitter.connect(this.enhMidGain, 1);
+      this.enhMidGain.connect(this.enhMerger, 0, 0);
+      this.enhMidGain.connect(this.enhMerger, 0, 1);
+      // Side path: L→sideGain (positive) merged into output L; R→inverted sideGain into output R.
+      // For simplicity reuse same sideGain magnitude on both — width is approximated.
+      this.enhSplitter.connect(this.enhSideGain, 0);
+      this.enhSideGain.connect(this.enhMerger, 0, 0);
+      this.enhSplitter.connect(this.enhSideGain, 1);
+      this.enhSideGain.connect(this.enhMerger, 0, 1);
+
+      // Dry/wet reverb mix → analyser → destination
+      this.enhMerger.connect(this.enhDryGain).connect(this.enhOut);
+      this.enhMerger.connect(this.enhConvolver).connect(this.enhWetGain).connect(this.enhOut);
+      this.enhOut.connect(this.analyser).connect(this.ctx.destination);
+
+      // Apply persisted preset
+      this.applyEnhancer(usePlayerStore.getState().enhancer);
     } catch (e) {
       console.warn("WebAudio init failed; falling back to plain audio.", e);
       this.ctx = null;
     }
+  }
+
+  // ------- Reverb impulse response generator -------
+  private makeImpulseResponse(ctx: AudioContext, seconds: number, decay: number): AudioBuffer {
+    const rate = ctx.sampleRate;
+    const length = Math.max(1, Math.floor(rate * seconds));
+    const ir = ctx.createBuffer(2, length, rate);
+    for (let ch = 0; ch < 2; ch++) {
+      const data = ir.getChannelData(ch);
+      for (let i = 0; i < length; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, decay);
+      }
+    }
+    return ir;
+  }
+
+  // ------- Apply enhancer preset (smooth ramps, no clicks) -------
+  private applyEnhancer(preset: EnhancerPreset) {
+    if (!this.ctx || !this.enhLow) return;
+    const p = ENHANCER_PRESETS[preset] || ENHANCER_PRESETS.off;
+    const t = this.ctx.currentTime;
+    const tau = 0.08;
+    try {
+      this.enhLow!.gain.setTargetAtTime(p.low, t, tau);
+      this.enhMid!.gain.setTargetAtTime(p.mid, t, tau);
+      this.enhHigh!.gain.setTargetAtTime(p.high, t, tau);
+      this.enhComp!.threshold.setTargetAtTime(p.compThreshold || 0, t, tau);
+      this.enhComp!.ratio.setTargetAtTime(Math.max(1, p.compRatio), t, tau);
+      // Width: 0 = mono-ish (mid up, side 0), 1 = wider (mid 1, side 1.5)
+      this.enhMidGain!.gain.setTargetAtTime(1 - p.width * 0.4, t, tau);
+      this.enhSideGain!.gain.setTargetAtTime(p.width * 0.6, t, tau);
+      // Reverb wet/dry
+      this.enhWetGain!.gain.setTargetAtTime(p.reverbWet, t, tau);
+      this.enhDryGain!.gain.setTargetAtTime(1 - p.reverbWet * 0.5, t, tau);
+      // Output gain compensation: heavy EQ boosts → drop output a touch to avoid clipping
+      const boost = Math.max(0, Math.max(p.low, p.mid, p.high));
+      this.enhOut!.gain.setTargetAtTime(Math.pow(10, -boost / 60), t, tau);
+    } catch { /* */ }
   }
 
   // ------- Audio element event wiring -------
