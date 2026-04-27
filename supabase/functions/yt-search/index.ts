@@ -125,8 +125,9 @@ function extractItems(data: unknown, limit: number): Item[] {
 
       if (id && title && durationText) {
         const duration = parseDuration(durationText);
-        // Skip live (0s) and very long (>20min: likely full albums/podcasts)
-        if (duration > 0 && duration < 1200) {
+        // Skip live/zero duration. Allow up to 35 min so long bhajans /
+        // qawwalis / classical pieces are not dropped.
+        if (duration > 0 && duration < 2100) {
           items.push({
             type: "video",
             id,
