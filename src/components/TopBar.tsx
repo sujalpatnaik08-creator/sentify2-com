@@ -58,8 +58,49 @@ export const TopBar = () => {
           value={q}
           onChange={(e) => onChange(e.target.value)}
           placeholder="Search songs, artists, albums…"
-          className="pl-11 h-11 bg-secondary/60 border border-border/60 rounded-full focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary/40 text-sm"
+          className="pl-11 pr-12 h-11 bg-secondary/60 border border-border/60 rounded-full focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary/40 text-sm"
         />
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={() => {
+            const SR: any =
+              (window as any).SpeechRecognition ||
+              (window as any).webkitSpeechRecognition;
+            if (!SR) {
+              toast({ title: "Voice search unavailable", description: "Your browser does not support speech recognition." });
+              return;
+            }
+            if (listening && recognitionRef._sr) {
+              try { recognitionRef._sr.stop(); } catch { /* ignore */ }
+              setListening(false);
+              return;
+            }
+            const sr = new SR();
+            sr.lang = navigator.language || "en-US";
+            sr.interimResults = true;
+            sr.continuous = false;
+            sr.maxAlternatives = 1;
+            recognitionRef._sr = sr;
+            setListening(true);
+            sr.onresult = (e: any) => {
+              const text = Array.from(e.results)
+                .map((r: any) => r[0]?.transcript || "")
+                .join(" ")
+                .trim();
+              if (text) onChange(text);
+            };
+            sr.onerror = () => { setListening(false); };
+            sr.onend = () => { setListening(false); };
+            try { sr.start(); } catch { setListening(false); }
+          }}
+          className={`absolute right-1.5 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full ${listening ? "text-primary animate-pulse" : "text-muted-foreground"}`}
+          aria-label={listening ? "Stop voice search" : "Start voice search"}
+          title={listening ? "Listening… click to stop" : "Voice search"}
+        >
+          {listening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+        </Button>
       </div>
 
       {/* Right: perf mode + theme toggle + account / login */}
