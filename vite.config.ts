@@ -19,4 +19,26 @@ export default defineConfig(({ mode }) => ({
     },
     dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime", "@tanstack/react-query", "@tanstack/query-core"],
   },
+  build: {
+    // Hide source code in production: no sourcemaps, aggressive minification,
+    // strip console + debugger statements so the served JS is opaque.
+    sourcemap: false,
+    minify: "esbuild",
+    target: "es2020",
+    cssCodeSplit: true,
+    chunkSizeWarningLimit: 1500,
+    rollupOptions: {
+      output: {
+        // Hashed filenames make it harder to map bundles back to source paths.
+        entryFileNames: "assets/[hash].js",
+        chunkFileNames: "assets/[hash].js",
+        assetFileNames: "assets/[hash][extname]",
+      },
+    },
+  },
+  esbuild: {
+    // Strip console.* and debugger from production bundles only.
+    drop: mode === "production" ? ["console", "debugger"] : [],
+    legalComments: "none",
+  },
 }));
