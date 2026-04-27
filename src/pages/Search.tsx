@@ -191,18 +191,8 @@ const Search = () => {
     }
   }, [q, page, tracks, artists, playlists, loading, loadingMore, hasMore]);
 
-  useEffect(() => {
-    if (!sentinelRef.current) return;
-    const el = sentinelRef.current;
-    const obs = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting) loadMore();
-      },
-      { rootMargin: "400px" },
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [loadMore]);
+  // Spotify uses an explicit "Show more" button rather than auto-load. The
+  // sentinel ref is intentionally unused (kept for future opt-in scroll mode).
 
   const retry = () => setAttempt((n) => n + 1);
 
