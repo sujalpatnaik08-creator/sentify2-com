@@ -124,7 +124,7 @@ const Search = () => {
 
   const { current, isPlaying, playTrack, togglePlay } = usePlayer();
 
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  // (sentinelRef removed — using explicit "Show more" button instead)
 
   // ---------- Initial / re-search ----------
   const runSearch = useCallback(async (query: string) => {
