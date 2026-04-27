@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight, Play, Headphones, Sparkles } from "lucide-react";
 import { MoodFilter } from "@/components/MoodFilter";
+import { HumToSearch } from "@/components/HumToSearch";
 import { TrackCard } from "@/components/TrackCard";
 import { topTracks, tracksByTag } from "@/lib/music-api";
 import type { Mood, Track } from "@/types/music";
@@ -160,6 +161,11 @@ const Home = () => {
           <FeatureChip icon={<Sparkles className="w-4 h-4" />} title="Synced lyrics" body="Sing along, line by line." />
           <FeatureChip icon={<Play className="w-4 h-4" />} title="Smart moods" body="Curated for every feeling." />
         </div>
+      </section>
+
+      {/* === HUM TO SEARCH =================================================== */}
+      <section className="px-6 md:px-10 py-4 max-w-7xl mx-auto">
+        <HumToSearch />
       </section>
 
       {/* === MOOD FILTER ===================================================== */}
