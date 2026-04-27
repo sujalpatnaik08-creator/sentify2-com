@@ -233,16 +233,38 @@ async function audiusFetch(path: string): Promise<AudiusTrack[]> {
 
 // ---------- Public API ----------
 
+// Tiny client cache so repeat queries (back/forward, retyping) feel instant.
+const searchCache = new Map<string, { ts: number; data: SearchResults }>();
+const SEARCH_CACHE_TTL = 5 * 60 * 1000;
+const cacheGet = (k: string): SearchResults | null => {
+  const hit = searchCache.get(k);
+  if (!hit) return null;
+  if (Date.now() - hit.ts > SEARCH_CACHE_TTL) { searchCache.delete(k); return null; }
+  return hit.data;
+};
+const cacheSet = (k: string, data: SearchResults) => {
+  searchCache.set(k, { ts: Date.now(), data });
+  if (searchCache.size > 80) {
+    const firstKey = searchCache.keys().next().value;
+    if (firstKey) searchCache.delete(firstKey);
+  }
+};
+
 export async function searchAll(query: string, limit = 40): Promise<SearchResults> {
   if (!query.trim()) return { tracks: [], artists: [], playlists: [] };
+  const key = `all:${limit}:${query.toLowerCase()}`;
+  const cached = cacheGet(key);
+  if (cached) return cached;
   const yt = await youtubeSearchAll(query, limit);
-  if (yt.tracks.length > 0) return yt;
+  if (yt.tracks.length > 0) { cacheSet(key, yt); return yt; }
   // Fallback to Audius (tracks only)
   const au = await audiusFetch(
     `/v1/tracks/search?query=${encodeURIComponent(query)}&limit=${limit}`,
   );
   if (au.length > 0) {
-    return { tracks: au.map(mapAudius), artists: [], playlists: [] };
+    const data = { tracks: au.map(mapAudius), artists: [], playlists: [] };
+    cacheSet(key, data);
+    return data;
   }
   throw new Error("Music service is unreachable. Please try again.");
 }
