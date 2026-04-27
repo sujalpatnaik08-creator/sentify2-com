@@ -59,13 +59,23 @@ export const TopBar = () => {
         />
       </div>
 
-      {/* Right: theme toggle + account / login */}
+      {/* Right: perf mode + theme toggle + account / login */}
       <div className="ml-auto flex items-center gap-2">
         <Button
           variant="ghost"
           size="icon"
+          onClick={() => { const next = !perf; setPerf(next); setPerfMode(next); }}
+          className={`rounded-full h-9 w-9 bg-secondary/60 hover:bg-secondary border border-border/60 ${perf ? "text-primary" : ""}`}
+          aria-label={perf ? "Disable Performance Mode" : "Enable Performance Mode"}
+          title={perf ? "Performance Mode: ON (low latency)" : "Performance Mode: OFF"}
+        >
+          <Zap className={`w-4 h-4 ${perf ? "fill-current" : ""}`} />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={toggleTheme}
-          className="rounded-full h-9 w-9 bg-secondary/60 hover:bg-secondary border border-border/50"
+          className="rounded-full h-9 w-9 bg-secondary/60 hover:bg-secondary border border-border/60"
           aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
           title={theme === "dark" ? "Light mode" : "Dark mode"}
         >
