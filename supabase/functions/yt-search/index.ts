@@ -188,6 +188,82 @@ async function searchCategory(query: string, category: Category, limit: number):
   return extractItems(data, limit);
 }
 
+// ---------- In-memory response cache ----------
+// Repeat queries (e.g. user backspaces & retypes) return instantly.
+interface CacheEntry { ts: number; items: Item[] }
+const CACHE = new Map<string, CacheEntry>();
+const CACHE_TTL_MS = 10 * 60 * 1000; // 10 min
+const cacheKey = (q: string, cat: Category, lim: number) => `${cat}:${lim}:${q.toLowerCase()}`;
+const getCached = (k: string): Item[] | null => {
+  const hit = CACHE.get(k);
+  if (!hit) return null;
+  if (Date.now() - hit.ts > CACHE_TTL_MS) { CACHE.delete(k); return null; }
+  return hit.items;
+};
+const setCached = (k: string, items: Item[]) => {
+  CACHE.set(k, { ts: Date.now(), items });
+  // Bound memory: simple FIFO trim
+  if (CACHE.size > 500) {
+    const firstKey = CACHE.keys().next().value;
+    if (firstKey) CACHE.delete(firstKey);
+  }
+};
+
+// Detect regional / devotional intent so we can broaden the catalogue.
+// Crucially: Odia, Bhajan, Bhojpuri, Marathi, Tamil, Telugu, etc. are not
+// well-covered by YouTube's "Music" filter alone — we need parallel fan-out.
+const REGIONAL_RE = /\b(bhajan|kirtan|aarti|mantra|chant|odia|oriya|jagannath|krishna|ram|hanuman|shiva|durga|saraswati|ganesh|sai baba|bhojpuri|marathi|gujarati|punjabi|tamil|telugu|kannada|malayalam|bengali|assamese|nepali|sanskrit|qawwali|naat|hamd|ghazal|sufi)\b/i;
+const isRegionalQuery = (q: string) => REGIONAL_RE.test(q) || /[\u0900-\u097F\u0980-\u09FF\u0B00-\u0B7F\u0A80-\u0AFF\u0A00-\u0A7F\u0B80-\u0BFF\u0C00-\u0C7F\u0C80-\u0CFF\u0D00-\u0D7F]/.test(q);
+
+async function searchCategoryCached(query: string, category: Category, limit: number): Promise<Item[]> {
+  const key = cacheKey(query, category, limit);
+  const cached = getCached(key);
+  if (cached) return cached;
+  try {
+    const items = await searchCategory(query, category, limit);
+    setCached(key, items);
+    return items;
+  } catch {
+    return [];
+  }
+}
+
+// Fan-out: run several searches in parallel and merge unique results.
+// This dramatically widens coverage so obscure / regional / devotional
+// titles surface on the first request — Spotify-style breadth.
+async function fanoutSearch(query: string, limit: number): Promise<Item[]> {
+  const queries: Array<{ q: string; cat: Category }> = [
+    { q: query, cat: "music" },
+    { q: query, cat: "videos" },
+  ];
+  if (isRegionalQuery(query)) {
+    queries.push({ q: `${query} song`, cat: "videos" });
+    queries.push({ q: `${query} bhajan`, cat: "videos" });
+    queries.push({ q: `${query} audio`, cat: "videos" });
+  } else {
+    queries.push({ q: `${query} song`, cat: "music" });
+  }
+
+  const results = await Promise.all(
+    queries.map(({ q, cat }) => searchCategoryCached(q, cat, limit)),
+  );
+
+  // Dedupe preserving insertion order (music first => higher rank)
+  const seen = new Set<string>();
+  const merged: Item[] = [];
+  for (const arr of results) {
+    for (const it of arr) {
+      const key = it.type === "video" ? `v:${it.id}` : it.type === "channel" ? `c:${it.id}` : `p:${it.id}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      merged.push(it);
+      if (merged.length >= limit + 25) break;
+    }
+    if (merged.length >= limit + 25) break;
+  }
+  return merged;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -204,26 +280,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    const items = await searchCategory(q, category, limit);
-
-    // For music searches, top up with broader videos if we got too few music
-    // hits — keeps obscure tracks discoverable.
-    if (category === "music" && items.filter((i) => i.type === "video").length < 8) {
-      try {
-        const extra = await searchCategory(q, "videos", limit);
-        const seen = new Set(
-          items.map((i) => (i.type === "video" ? i.id : `${i.type}:${(i as ChannelItem | PlaylistItem).id}`)),
-        );
-        for (const it of extra) {
-          const key = it.type === "video" ? it.id : `${it.type}:${it.id}`;
-          if (!seen.has(key)) {
-            items.push(it);
-            seen.add(key);
-          }
-          if (items.length >= limit + 15) break;
-        }
-      } catch { /* ignore */ }
-    }
+    // For the default "music" category we run the wide fan-out so regional
+    // / devotional / niche tracks (Odia bhajans, Sufi qawwalis, etc.) all
+    // appear. Other explicit categories use the focused single search.
+    const items =
+      category === "music"
+        ? await fanoutSearch(q, limit)
+        : await searchCategoryCached(q, category, limit);
 
     return new Response(JSON.stringify({ items }), {
       headers: {
