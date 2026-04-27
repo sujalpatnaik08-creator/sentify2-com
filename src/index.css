@@ -2,42 +2,46 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Sentify - Spotify-inspired design system. All colors HSL. */
+/* Sentify — Spotify-inspired design system. All colors HSL.
+   Palette: Black + Light Blue (primary) for dark mode, clean white + blue for light. */
 
 @layer base {
-  :root {
-    --background: 0 0% 7%;
+  /* ---------- Dark theme (default) — black + light blue ---------- */
+  :root,
+  .dark {
+    --background: 0 0% 6%;
     --foreground: 0 0% 100%;
 
-    --card: 0 0% 10%;
+    --card: 0 0% 9%;
     --card-foreground: 0 0% 100%;
 
-    --popover: 0 0% 10%;
+    --popover: 0 0% 9%;
     --popover-foreground: 0 0% 100%;
 
-    --primary: 141 76% 48%;
-    --primary-foreground: 0 0% 0%;
-    --primary-glow: 141 80% 58%;
+    /* Light blue primary */
+    --primary: 200 95% 62%;
+    --primary-foreground: 220 40% 8%;
+    --primary-glow: 200 100% 72%;
 
-    --secondary: 0 0% 14%;
+    --secondary: 0 0% 13%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 0 0% 16%;
+    --muted: 0 0% 15%;
     --muted-foreground: 0 0% 70%;
 
-    --accent: 141 76% 48%;
-    --accent-foreground: 0 0% 0%;
+    --accent: 200 95% 62%;
+    --accent-foreground: 220 40% 8%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 0 0% 18%;
-    --input: 0 0% 16%;
-    --ring: 141 76% 48%;
+    --border: 0 0% 17%;
+    --input: 0 0% 15%;
+    --ring: 200 95% 62%;
 
     --radius: 0.5rem;
 
-    --gradient-primary: linear-gradient(135deg, hsl(141 76% 48%), hsl(141 80% 38%));
+    --gradient-primary: linear-gradient(135deg, hsl(200 95% 62%), hsl(215 90% 50%));
     --gradient-mood-happy: linear-gradient(135deg, hsl(45 100% 60%), hsl(20 100% 55%));
     --gradient-mood-chill: linear-gradient(135deg, hsl(200 80% 55%), hsl(240 70% 60%));
     --gradient-mood-focus: linear-gradient(135deg, hsl(260 60% 55%), hsl(220 70% 50%));
@@ -46,10 +50,10 @@
     --gradient-mood-party: linear-gradient(135deg, hsl(320 90% 60%), hsl(280 90% 55%));
     --gradient-mood-romance: linear-gradient(135deg, hsl(340 80% 60%), hsl(0 70% 55%));
     --gradient-mood-sleep: linear-gradient(135deg, hsl(230 50% 25%), hsl(260 40% 20%));
-    --gradient-hero: linear-gradient(180deg, hsl(141 60% 25%), hsl(0 0% 7%) 70%);
-    --gradient-bright: linear-gradient(180deg, hsl(141 50% 30%), hsl(0 0% 7%) 70%);
+    --gradient-hero: linear-gradient(180deg, hsl(210 70% 22%), hsl(0 0% 6%) 70%);
+    --gradient-bright: linear-gradient(180deg, hsl(200 70% 28%), hsl(0 0% 6%) 70%);
 
-    --shadow-glow: 0 8px 24px hsl(141 76% 48% / 0.35);
+    --shadow-glow: 0 8px 24px hsl(200 95% 62% / 0.35);
     --shadow-card: 0 8px 24px hsl(0 0% 0% / 0.5);
     --shadow-elegant: 0 16px 40px -8px hsl(0 0% 0% / 0.6);
 
@@ -57,17 +61,61 @@
 
     --sidebar-background: 0 0% 0%;
     --sidebar-foreground: 0 0% 70%;
-    --sidebar-primary: 141 76% 48%;
-    --sidebar-primary-foreground: 0 0% 0%;
-    --sidebar-accent: 0 0% 12%;
+    --sidebar-primary: 200 95% 62%;
+    --sidebar-primary-foreground: 220 40% 8%;
+    --sidebar-accent: 0 0% 11%;
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 0 0% 14%;
-    --sidebar-ring: 141 76% 48%;
+    --sidebar-border: 0 0% 13%;
+    --sidebar-ring: 200 95% 62%;
   }
 
-  .dark {
-    --background: 0 0% 7%;
-    --foreground: 0 0% 100%;
+  /* ---------- Light theme — white + light blue ---------- */
+  .light {
+    --background: 210 30% 98%;
+    --foreground: 220 25% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 25% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 25% 12%;
+
+    --primary: 205 90% 50%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 205 95% 60%;
+
+    --secondary: 210 30% 94%;
+    --secondary-foreground: 220 25% 12%;
+
+    --muted: 210 25% 92%;
+    --muted-foreground: 220 10% 40%;
+
+    --accent: 205 90% 50%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 75% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 210 20% 88%;
+    --input: 210 25% 92%;
+    --ring: 205 90% 50%;
+
+    --gradient-primary: linear-gradient(135deg, hsl(205 90% 50%), hsl(215 85% 45%));
+    --gradient-hero: linear-gradient(180deg, hsl(205 90% 88%), hsl(210 30% 98%) 70%);
+    --gradient-bright: linear-gradient(180deg, hsl(205 90% 90%), hsl(210 30% 98%) 70%);
+
+    --shadow-glow: 0 8px 24px hsl(205 90% 50% / 0.25);
+    --shadow-card: 0 8px 24px hsl(220 30% 20% / 0.08);
+    --shadow-elegant: 0 16px 40px -8px hsl(220 30% 20% / 0.12);
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 220 15% 30%;
+    --sidebar-primary: 205 90% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 30% 94%;
+    --sidebar-accent-foreground: 220 25% 12%;
+    --sidebar-border: 210 20% 88%;
+    --sidebar-ring: 205 90% 50%;
   }
 }
 
