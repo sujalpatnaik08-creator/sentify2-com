@@ -13,9 +13,25 @@
 // (cross-origin), so crossfade/normalize fall back to player-volume ramps.
 
 import type { Track } from "@/types/music";
-import { addRecentlyPlayed, getPerfMode, isValidYouTubeId } from "@/lib/user-prefs";
+import { addRecentlyPlayed, getPerfMode, isValidYouTubeId, type EnhancerPreset } from "@/lib/user-prefs";
 import { usePlayerStore } from "@/stores/playerStore";
 import { searchTracks } from "@/lib/music-api";
+
+// ---------------- Audio Enhancer presets ----------------
+// Per preset: low/mid/high EQ gain (dB), compressor threshold, stereo width 0..1, reverb wet 0..1.
+interface EnhancerSettings {
+  low: number; mid: number; high: number;
+  compThreshold: number; compRatio: number;
+  width: number; reverbWet: number;
+}
+const ENHANCER_PRESETS: Record<EnhancerPreset, EnhancerSettings> = {
+  off:     { low: 0,  mid: 0,  high: 0,  compThreshold: 0,   compRatio: 1, width: 0,    reverbWet: 0 },
+  auto:    { low: 2,  mid: 0,  high: 2,  compThreshold: -22, compRatio: 3, width: 0.25, reverbWet: 0.05 },
+  vocal:   { low: -1, mid: 4,  high: 3,  compThreshold: -20, compRatio: 4, width: 0.15, reverbWet: 0.08 },
+  bass:    { low: 6,  mid: -1, high: 1,  compThreshold: -22, compRatio: 4, width: 0.20, reverbWet: 0.05 },
+  cinema:  { low: 4,  mid: 1,  high: 4,  compThreshold: -20, compRatio: 3, width: 0.50, reverbWet: 0.18 },
+  podcast: { low: -3, mid: 5,  high: 2,  compThreshold: -18, compRatio: 6, width: 0,    reverbWet: 0 },
+};
 
 // ---------------- YouTube IFrame API loader ----------------
 declare global {
