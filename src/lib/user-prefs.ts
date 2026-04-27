@@ -9,7 +9,18 @@ const K = {
   history: "sentify_search_history",   // string[]
   played: "sentify_recently_played",   // Track[]
   favArtists: "sentify_fav_artists",   // {id,name,thumbnail}[]
+  perfMode: "sentify_perf_mode",       // "1" | "0"
 };
+
+// ---------- Performance Mode ----------
+// When ON: aggressive audio preloading, faster polling, fewer re-renders.
+export function getPerfMode(): boolean {
+  try { return localStorage.getItem(K.perfMode) !== "0"; } catch { return true; }
+}
+export function setPerfMode(on: boolean) {
+  try { localStorage.setItem(K.perfMode, on ? "1" : "0"); } catch { /* ignore */ }
+  window.dispatchEvent(new CustomEvent("sentify:perf-mode", { detail: on }));
+}
 
 // ---------- liked songs ----------
 
