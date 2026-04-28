@@ -47,6 +47,7 @@ export const PlayerBar = ({ onToggleLyrics, onToggleQueue, showLyrics, showQueue
     crossfadeSec,
     normalize,
     autoplayContinuity,
+    audioEnhance,
     togglePlay,
     next,
     prev,
@@ -57,6 +58,7 @@ export const PlayerBar = ({ onToggleLyrics, onToggleQueue, showLyrics, showQueue
     setCrossfade,
     setNormalize,
     setAutoplayContinuity,
+    setAudioEnhance,
   } = usePlayer();
   const [muted, setMuted] = useState(false);
 
@@ -203,6 +205,13 @@ export const PlayerBar = ({ onToggleLyrics, onToggleQueue, showLyrics, showQueue
                     <p className="text-[10px] text-muted-foreground">When the queue ends</p>
                   </div>
                   <Switch id="auto" checked={autoplayContinuity} onCheckedChange={setAutoplayContinuity} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="enh" className="text-xs">Audio enhancer</Label>
+                    <p className="text-[10px] text-muted-foreground">Auto EQ, compression & stereo widening</p>
+                  </div>
+                  <Switch id="enh" checked={audioEnhance} onCheckedChange={setAudioEnhance} />
                 </div>
               </div>
             </PopoverContent>

@@ -73,7 +73,7 @@ class PlaybackEngine {
   private audioB: HTMLAudioElement;
   private active: "A" | "B" = "A";
 
-  // WebAudio graph for normalization + crossfade gains.
+  // WebAudio graph for normalization + crossfade gains + auto-enhancer.
   private ctx: AudioContext | null = null;
   private srcA: MediaElementAudioSourceNode | null = null;
   private srcB: MediaElementAudioSourceNode | null = null;
@@ -81,6 +81,23 @@ class PlaybackEngine {
   private gainB: GainNode | null = null;
   private analyser: AnalyserNode | null = null;
   private analyserActive: "A" | "B" = "A";
+
+  // Auto Enhancer chain (shared, post-gain) — bass shelf, presence peak,
+  // air shelf, gentle compressor + soft stereo widener. Bypassed via
+  // a wet/dry split when disabled.
+  private enhancerIn: GainNode | null = null;
+  private enhancerOut: GainNode | null = null;
+  private bypassNode: GainNode | null = null;
+  private wetNode: GainNode | null = null;
+  private bassEQ: BiquadFilterNode | null = null;
+  private presenceEQ: BiquadFilterNode | null = null;
+  private airEQ: BiquadFilterNode | null = null;
+  private compressor: DynamicsCompressorNode | null = null;
+  private widenerSplitter: ChannelSplitterNode | null = null;
+  private widenerMerger: ChannelMergerNode | null = null;
+  private widenerMidGain: GainNode | null = null;
+  private widenerSideGain: GainNode | null = null;
+  private enhanceOn = true;
 
   // YouTube hidden player
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -116,6 +133,12 @@ class PlaybackEngine {
       this.audioB.preload = on ? "auto" : "metadata";
     });
 
+    // Restore enhancer pref
+    try {
+      const v = localStorage.getItem("sentify_audio_enhance");
+      if (v != null) this.enhanceOn = v === "1";
+    } catch { /* */ }
+
     this.startMonitor();
     this.initYouTube();
   }
@@ -136,12 +159,69 @@ class PlaybackEngine {
       this.srcB = this.ctx.createMediaElementSource(this.audioB);
       this.analyser = this.ctx.createAnalyser();
       this.analyser.fftSize = 256;
-      this.srcA.connect(this.gainA).connect(this.analyser).connect(this.ctx.destination);
-      this.srcB.connect(this.gainB).connect(this.ctx.destination);
+
+      // -- Build enhancer subgraph --
+      this.enhancerIn = this.ctx.createGain();
+      this.enhancerOut = this.ctx.createGain();
+      this.bypassNode = this.ctx.createGain();
+      this.wetNode = this.ctx.createGain();
+
+      this.bassEQ = this.ctx.createBiquadFilter();
+      this.bassEQ.type = "lowshelf"; this.bassEQ.frequency.value = 110; this.bassEQ.gain.value = 3.5;
+      this.presenceEQ = this.ctx.createBiquadFilter();
+      this.presenceEQ.type = "peaking"; this.presenceEQ.frequency.value = 2800; this.presenceEQ.Q.value = 1.1; this.presenceEQ.gain.value = 2.2;
+      this.airEQ = this.ctx.createBiquadFilter();
+      this.airEQ.type = "highshelf"; this.airEQ.frequency.value = 9000; this.airEQ.gain.value = 2.5;
+
+      this.compressor = this.ctx.createDynamicsCompressor();
+      this.compressor.threshold.value = -22;
+      this.compressor.knee.value = 24;
+      this.compressor.ratio.value = 3;
+      this.compressor.attack.value = 0.005;
+      this.compressor.release.value = 0.18;
+
+      // Mid/Side-ish widener via channel split
+      this.widenerSplitter = this.ctx.createChannelSplitter(2);
+      this.widenerMerger = this.ctx.createChannelMerger(2);
+      this.widenerMidGain = this.ctx.createGain(); this.widenerMidGain.gain.value = 1;
+      this.widenerSideGain = this.ctx.createGain(); this.widenerSideGain.gain.value = 1.25;
+
+      // Wet path: in → bass → presence → air → comp → widener → out
+      this.enhancerIn
+        .connect(this.bassEQ)
+        .connect(this.presenceEQ)
+        .connect(this.airEQ)
+        .connect(this.compressor)
+        .connect(this.widenerSplitter);
+      // Left
+      this.widenerSplitter.connect(this.widenerMidGain, 0);
+      this.widenerMidGain.connect(this.widenerMerger, 0, 0);
+      this.widenerSplitter.connect(this.widenerSideGain, 1);
+      this.widenerSideGain.connect(this.widenerMerger, 0, 1);
+      this.widenerMerger.connect(this.wetNode).connect(this.enhancerOut);
+      // Dry path: in → bypass → out
+      this.enhancerIn.connect(this.bypassNode).connect(this.enhancerOut);
+
+      // Apply enhancer mix
+      this.applyEnhancerMix();
+
+      // Master routing: srcA/B → gainA/B → enhancerIn → enhancerOut → analyser → destination
+      this.srcA.connect(this.gainA).connect(this.enhancerIn);
+      this.srcB.connect(this.gainB).connect(this.enhancerIn);
+      this.enhancerOut.connect(this.analyser).connect(this.ctx.destination);
     } catch (e) {
       console.warn("WebAudio init failed; falling back to plain audio.", e);
       this.ctx = null;
     }
+  }
+
+  private applyEnhancerMix() {
+    if (!this.ctx || !this.wetNode || !this.bypassNode) return;
+    const t = this.ctx.currentTime;
+    const wet = this.enhanceOn ? 1 : 0;
+    const dry = this.enhanceOn ? 0 : 1;
+    try { this.wetNode.gain.setTargetAtTime(wet, t, 0.05); } catch { /* */ }
+    try { this.bypassNode.gain.setTargetAtTime(dry, t, 0.05); } catch { /* */ }
   }
 
   // ------- Audio element event wiring -------
@@ -547,6 +627,14 @@ class PlaybackEngine {
   setAutoplayContinuity(on: boolean) {
     usePlayerStore.getState()._set({ autoplayContinuity: on });
   }
+  // Automated audio enhancer (EQ + compressor + stereo widener).
+  setAudioEnhance(on: boolean) {
+    this.enhanceOn = on;
+    try { localStorage.setItem("sentify_audio_enhance", on ? "1" : "0"); } catch { /* */ }
+    usePlayerStore.getState()._set({ audioEnhance: on });
+    this.applyEnhancerMix();
+  }
+  isAudioEnhanceOn(): boolean { return this.enhanceOn; }
 
   // ------- Internals -------
   private handleEnd() {
