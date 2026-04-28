@@ -5,7 +5,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Loader2,
   X,
-  Crosshair,
   AlignLeft,
   ListMusic,
   Languages,
@@ -30,6 +29,7 @@ const TRANSLATE_LANGS: { code: string; label: string }[] = [
   { code: "off", label: "Original" },
   { code: "English", label: "English" },
   { code: "Hindi", label: "Hindi (हिन्दी)" },
+  { code: "Hinglish", label: "Hinglish (Hindi in Roman)" },
   { code: "Odia", label: "Odia (ଓଡ଼ିଆ)" },
   { code: "Bengali", label: "Bengali (বাংলা)" },
   { code: "Tamil", label: "Tamil (தமிழ்)" },
@@ -62,7 +62,6 @@ export const LyricsPanel = ({ onClose }: { onClose: () => void }) => {
 
   // Translation state
   const [targetLang, setTargetLang] = useState<string>("off");
-  const [romanize, setRomanize] = useState(false);
   const [translating, setTranslating] = useState(false);
   const [translatedPlain, setTranslatedPlain] = useState<string | null>(null);
   const [translatedSynced, setTranslatedSynced] = useState<LyricLine[] | null>(
@@ -150,7 +149,7 @@ export const LyricsPanel = ({ onClose }: { onClose: () => void }) => {
   const hasOriginal = !!synced || !!plain;
 
   // Run translation when target changes
-  const runTranslate = async (lang: string, withRomanize = romanize) => {
+  const runTranslate = async (lang: string) => {
     if (lang === "off") {
       setTranslatedPlain(null);
       setTranslatedSynced(null);
@@ -165,36 +164,21 @@ export const LyricsPanel = ({ onClose }: { onClose: () => void }) => {
         const joined = synced.map((l) => l.text || "♪").join("\n");
         const { data, error } = await supabase.functions.invoke(
           "translate-lyrics",
-          { body: { text: joined, targetLanguage: lang, romanize: withRomanize } },
+          { body: { text: joined, targetLanguage: lang, romanize: false } },
         );
         if (error) throw error;
         const translated = (data as { translated?: string })?.translated ?? "";
         const lines = translated.split(/\r?\n/);
-        // If romanize, AI returns 2 lines per source (translation + ~ romanized).
-        // We pair them back to timed lines best-effort.
         const out: LyricLine[] = [];
-        if (withRomanize) {
-          let srcIdx = 0;
-          for (let i = 0; i < lines.length && srcIdx < synced.length; i++) {
-            const t = lines[i] ?? "";
-            const next = lines[i + 1] ?? "";
-            const isRoman = next.trim().startsWith("~");
-            const text = isRoman ? `${t}\n${next}` : t;
-            out.push({ time: synced[srcIdx].time, text });
-            srcIdx++;
-            if (isRoman) i++;
-          }
-        } else {
-          for (let i = 0; i < synced.length; i++) {
-            out.push({ time: synced[i].time, text: lines[i] ?? "" });
-          }
+        for (let i = 0; i < synced.length; i++) {
+          out.push({ time: synced[i].time, text: lines[i] ?? "" });
         }
         setTranslatedSynced(out);
         setTranslatedPlain(out.map((l) => l.text).join("\n"));
       } else if (plain) {
         const { data, error } = await supabase.functions.invoke(
           "translate-lyrics",
-          { body: { text: plain, targetLanguage: lang, romanize: withRomanize } },
+          { body: { text: plain, targetLanguage: lang, romanize: false } },
         );
         if (error) throw error;
         const translated = (data as { translated?: string })?.translated ?? "";
@@ -226,12 +210,7 @@ export const LyricsPanel = ({ onClose }: { onClose: () => void }) => {
       setTranslatedSynced(null);
       return;
     }
-    void runTranslate(next, romanize);
-  };
-
-  const onToggleRomanize = (v: boolean) => {
-    setRomanize(v);
-    if (targetLang !== "off") void runTranslate(targetLang, v);
+    void runTranslate(next);
   };
 
   const statusLabel = (() => {
@@ -308,20 +287,6 @@ export const LyricsPanel = ({ onClose }: { onClose: () => void }) => {
           </button>
         </div>
 
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => {
-            setAutoScroll(true);
-            scrollToActive(true);
-          }}
-          disabled={mode !== "synced" || activeIdx < 0}
-          className="h-7 px-2 text-xs gap-1.5"
-          aria-label="Jump to current line"
-        >
-          <Crosshair className="w-3.5 h-3.5" /> Jump
-        </Button>
-
         <label className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer select-none">
           <input
             type="checkbox"
@@ -348,16 +313,6 @@ export const LyricsPanel = ({ onClose }: { onClose: () => void }) => {
             ))}
           </SelectContent>
         </Select>
-        <label className="flex items-center gap-1 text-xs text-muted-foreground cursor-pointer select-none whitespace-nowrap">
-          <input
-            type="checkbox"
-            checked={romanize}
-            onChange={(e) => onToggleRomanize(e.target.checked)}
-            className="accent-primary"
-            disabled={targetLang === "off"}
-          />
-          Romanize
-        </label>
         {targetLang !== "off" && (
           <Button
             variant="ghost"

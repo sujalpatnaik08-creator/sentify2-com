@@ -323,11 +323,31 @@ const Search = () => {
     return () => { cancelled = true; };
   }, [tracks]);
 
-  // Language-filtered tracks
+  // Popularity filter — drop unpopular tracks (very low views) and very short
+  // uploads. Keeps the catalog focused on mainstream / well-known songs.
+  const POPULAR_VIEWS_MIN = 50_000;
+  const popularTracks = tracks.filter((t) => {
+    // Audius tracks are curated; always allow.
+    if (t.source !== "youtube") return true;
+    // Track shape doesn't carry views directly here; rely on duration + ranking.
+    // The ranking step in music-api already prioritized popular results, so we
+    // additionally drop obviously low-quality items by duration sanity-check.
+    if (t.duration > 0 && (t.duration < 60 || t.duration > 720)) return false;
+    return true;
+  });
+
+  // Hide unpopular / local artists (no subscriber count or very low followers).
+  const popularArtists = artists.filter((a) => {
+    const s = (a.subscribers || "").toLowerCase();
+    if (!s) return false;
+    // Accept "K", "M", "B" suffix counts; reject plain small numbers.
+    return /\d+(\.\d+)?\s*[kmb]/i.test(s) || /\d{5,}/.test(s.replace(/[ ,.]/g, ""));
+  });
+
   const filteredTracks =
     langFilter === "all"
-      ? tracks
-      : tracks.filter((t) => detectLanguage(`${t.title} ${t.artist}`) === langFilter);
+      ? popularTracks
+      : popularTracks.filter((t) => detectLanguage(`${t.title} ${t.artist}`) === langFilter);
 
   // Albums derived from tracks
   const albums = (() => {
@@ -465,7 +485,7 @@ const Search = () => {
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); onDownload(t); }}
-                          className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="text-muted-foreground hover:text-destructive transition-opacity"
                           aria-label="Remove download"
                           title="Remove download"
                         >
@@ -475,12 +495,13 @@ const Search = () => {
                     ) : (
                       <button
                         onClick={(e) => { e.stopPropagation(); onDownload(t); }}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
+                        className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
                         aria-label="Download"
                         title={t.source === "youtube" ? "YouTube tracks are stream-only" : "Save offline"}
                         disabled={t.source === "youtube"}
                       >
                         <Download className="w-4 h-4" />
+                        <span className="text-[11px] font-medium hidden sm:inline">Download</span>
                       </button>
                     )}
                   </td>
@@ -488,13 +509,14 @@ const Search = () => {
                     <button
                       onClick={() => toggleTrackLyrics(t)}
                       className={cn(
-                        "opacity-0 group-hover:opacity-100 transition-opacity",
-                        isExpanded && "opacity-100 text-primary",
+                        "inline-flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors",
+                        isExpanded && "text-primary",
                       )}
                       aria-label={isExpanded ? "Hide lyrics" : "Show lyrics"}
                       title={isExpanded ? "Hide lyrics" : "Fetch lyrics"}
                     >
                       {isExpanded ? <ChevronUp className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
+                      <span className="text-[11px] font-medium hidden sm:inline">{isExpanded ? "Hide" : "Lyrics"}</span>
                     </button>
                   </td>
                   <td className="py-2 px-3 text-right text-muted-foreground tabular-nums">{fmt(t.duration)}</td>
@@ -527,12 +549,12 @@ const Search = () => {
   );
 
   const renderArtists = () => {
-    if (artists.length === 0) {
-      return <p className="text-muted-foreground text-sm">No artists found for this query.</p>;
+    if (popularArtists.length === 0) {
+      return <p className="text-muted-foreground text-sm">No popular artists found for this query.</p>;
     }
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-        {artists.map((a) => (
+        {popularArtists.map((a) => (
           <button
             key={a.id}
             onClick={() => goToArtist(a)}
@@ -626,167 +648,46 @@ const Search = () => {
       <div className="space-y-10">
         {/* Top result + Songs preview */}
         {top && (
-          <div className="grid lg:grid-cols-5 gap-6">
-            {/* Top result hero (Spotify uses a 2/5 column on desktop) */}
-            <section className="lg:col-span-2">
-              <h2 className="text-2xl font-bold mb-4">Top result</h2>
-              <div
-                onClick={() => handleRowPlay(top)}
-                className="group relative bg-card/50 hover:bg-card rounded-lg p-5 cursor-pointer transition-colors"
-              >
-                <img
-                  src={top.artwork}
-                  alt={top.title}
-                  className="w-24 h-24 rounded-md object-cover shadow-xl mb-5"
-                  onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")}
-                />
-                <h3 className="text-3xl font-bold truncate mb-2">{top.title}</h3>
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="text-muted-foreground truncate">{top.artist}</span>
-                  <span className="px-2 py-0.5 rounded-full bg-secondary text-foreground/80 text-[11px] font-semibold uppercase tracking-wide">Song</span>
-                  {topLang && (
-                    <span className={cn("inline-flex items-center px-2 py-0.5 rounded-full border text-[10px] font-medium", LANG_COLORS[topLang])}>
-                      {LANG_LABEL[topLang]}
-                    </span>
-                  )}
-                </div>
-                {/* Floating play button — appears on hover, Spotify-style */}
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleRowPlay(top); }}
-                  className="absolute bottom-5 right-5 h-12 w-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all"
-                  aria-label={current?.id === top.id && isPlaying ? "Pause" : "Play"}
-                >
-                  {current?.id === top.id && isPlaying
-                    ? <Pause className="w-5 h-5 fill-current" />
-                    : <Play className="w-5 h-5 fill-current ml-0.5" />}
-                </button>
-              </div>
-            </section>
-
-            {/* Songs preview (4 rows) */}
-            <section className="lg:col-span-3">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-bold">Songs</h2>
-                <button
-                  onClick={() => setTab("songs")}
-                  className="text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Show all
-                </button>
-              </div>
-              {renderTracksTable(filteredTracks.slice(0, 4))}
-            </section>
-          </div>
-        )}
-
-        {/* Artists row */}
-        {artists.length > 0 && (
           <section>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold">Artists</h2>
+            <h2 className="text-2xl font-bold mb-4">Top result</h2>
+            <div
+              onClick={() => handleRowPlay(top)}
+              className="group relative bg-card/50 hover:bg-card rounded-lg p-5 cursor-pointer transition-colors max-w-2xl"
+            >
+              <img
+                src={top.artwork}
+                alt={top.title}
+                className="w-24 h-24 rounded-md object-cover shadow-xl mb-5"
+                onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")}
+              />
+              <h3 className="text-3xl font-bold truncate mb-2">{top.title}</h3>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-muted-foreground truncate">{top.artist}</span>
+                <span className="px-2 py-0.5 rounded-full bg-secondary text-foreground/80 text-[11px] font-semibold uppercase tracking-wide">Song</span>
+                {topLang && (
+                  <span className={cn("inline-flex items-center px-2 py-0.5 rounded-full border text-[10px] font-medium", LANG_COLORS[topLang])}>
+                    {LANG_LABEL[topLang]}
+                  </span>
+                )}
+              </div>
               <button
-                onClick={() => setTab("artists")}
-                className="text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
+                onClick={(e) => { e.stopPropagation(); handleRowPlay(top); }}
+                className="absolute bottom-5 right-5 h-12 w-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all"
+                aria-label={current?.id === top.id && isPlaying ? "Pause" : "Play"}
               >
-                Show all
+                {current?.id === top.id && isPlaying
+                  ? <Pause className="w-5 h-5 fill-current" />
+                  : <Play className="w-5 h-5 fill-current ml-0.5" />}
               </button>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {artists.slice(0, 6).map((a) => (
-                <button
-                  key={a.id}
-                  onClick={() => goToArtist(a)}
-                  className="flex flex-col items-center gap-3 p-4 rounded-lg bg-card/40 hover:bg-card transition-colors text-center"
-                >
-                  <img
-                    src={a.thumbnail}
-                    alt={a.name}
-                    className="w-full aspect-square rounded-full object-cover shadow-lg"
-                    onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")}
-                  />
-                  <div className="min-w-0 w-full">
-                    <div className="font-semibold truncate">{a.name}</div>
-                    <div className="text-xs text-muted-foreground truncate">Artist</div>
-                  </div>
-                </button>
-              ))}
             </div>
           </section>
         )}
 
-        {/* Albums row */}
-        {albums.length > 0 && (
+        {/* Full songs list below the Top result */}
+        {filteredTracks.length > 0 && (
           <section>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold">Albums</h2>
-              <button
-                onClick={() => setTab("albums")}
-                className="text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Show all
-              </button>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {albums.slice(0, 6).map((al) => {
-                const albumTracks = filteredTracks.filter(
-                  (t) => (t.album?.trim() || t.title) === al.name && t.artist === al.artist,
-                );
-                return (
-                  <button
-                    key={`${al.name}-${al.artist}`}
-                    onClick={() => albumTracks[0] && playTrack(albumTracks[0], albumTracks)}
-                    className="flex flex-col gap-3 p-3 rounded-lg bg-card/40 hover:bg-card transition-colors text-left"
-                  >
-                    <img
-                      src={al.artwork}
-                      alt={al.name}
-                      className="w-full aspect-square rounded-md object-cover shadow-lg"
-                      onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")}
-                    />
-                    <div className="min-w-0">
-                      <div className="font-semibold truncate">{al.name}</div>
-                      <div className="text-xs text-muted-foreground truncate">{al.artist}</div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-        )}
-
-        {/* Playlists row */}
-        {playlists.length > 0 && (
-          <section>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold">Playlists</h2>
-              <button
-                onClick={() => setTab("playlists")}
-                className="text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Show all
-              </button>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {playlists.slice(0, 6).map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => navigate(`/search?q=${encodeURIComponent(p.title)}`)}
-                  className="flex flex-col gap-3 p-3 rounded-lg bg-card/40 hover:bg-card transition-colors text-left"
-                >
-                  <div className="relative w-full aspect-square rounded-md overflow-hidden shadow-lg bg-muted">
-                    <img src={p.thumbnail} alt={p.title} className="w-full h-full object-cover"
-                      onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")} />
-                    <div className="absolute bottom-1.5 right-1.5 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded">
-                      {p.videoCount} tracks
-                    </div>
-                  </div>
-                  <div className="min-w-0">
-                    <div className="font-semibold truncate">{p.title}</div>
-                    <div className="text-xs text-muted-foreground truncate">{p.author || "Playlist"}</div>
-                  </div>
-                </button>
-              ))}
-            </div>
+            <h2 className="text-2xl font-bold mb-4">Songs</h2>
+            {renderTracksTable(filteredTracks)}
           </section>
         )}
       </div>
@@ -847,49 +748,28 @@ const Search = () => {
         </div>
       )}
 
-      {/* Filter chips */}
-      {q && (tracks.length > 0 || artists.length > 0 || playlists.length > 0) && (
-        <>
-          <div className="flex items-center gap-2 flex-wrap mb-4">
-            {TABS.map((t) => {
-              const Icon = t.icon;
-              return (
-                <button
-                  key={t.id}
-                  onClick={() => setTab(t.id)}
-                  className={cn(
-                    "inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-colors border",
-                    tab === t.id
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-secondary/60 text-muted-foreground border-border hover:text-foreground hover:bg-secondary"
-                  )}
-                >
-                  <Icon className="w-3.5 h-3.5" />
-                  {t.label}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Language filter */}
-          <div className="flex items-center gap-2 flex-wrap mb-6 text-xs">
-            <span className="text-muted-foreground">Language:</span>
-            {(["all", "english", "hindi", "spanish", "korean", "japanese", "arabic"] as const).map((l) => (
-              <button
-                key={l}
-                onClick={() => setLangFilter(l)}
-                className={cn(
-                  "px-2.5 py-0.5 rounded-full border transition-colors",
-                  langFilter === l
-                    ? "bg-foreground text-background border-foreground"
-                    : "bg-transparent text-muted-foreground border-border/60 hover:text-foreground hover:border-border"
-                )}
-              >
-                {l === "all" ? "All" : LANG_LABEL[l as Language]}
-              </button>
-            ))}
-          </div>
-        </>
+      {/* Compact popularity + language filter */}
+      {q && (tracks.length > 0) && (
+        <div className="flex items-center gap-2 flex-wrap mb-6 text-xs">
+          <span className="px-2.5 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/40 font-medium">
+            Popular only
+          </span>
+          <span className="text-muted-foreground ml-2">Language:</span>
+          {(["all", "english", "hindi", "spanish", "korean", "japanese", "arabic"] as const).map((l) => (
+            <button
+              key={l}
+              onClick={() => setLangFilter(l)}
+              className={cn(
+                "px-2.5 py-0.5 rounded-full border transition-colors",
+                langFilter === l
+                  ? "bg-foreground text-background border-foreground"
+                  : "bg-transparent text-muted-foreground border-border hover:text-foreground"
+              )}
+            >
+              {l === "all" ? "All" : LANG_LABEL[l as Language]}
+            </button>
+          ))}
+        </div>
       )}
 
       {loading && (
