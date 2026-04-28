@@ -18,6 +18,8 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     engine.setCrossfade(getCrossfadeSec());
     engine.setNormalize(getNormalize());
     engine.setAutoplayContinuity(getAutoplayContinuity());
+    // Hydrate audio-enhance from engine (engine already restored from localStorage).
+    usePlayerStore.getState()._set({ audioEnhance: engine.isAudioEnhanceOn() });
   }, []);
 
   return (
