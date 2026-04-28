@@ -648,44 +648,39 @@ const Search = () => {
       <div className="space-y-10">
         {/* Top result + Songs preview */}
         {top && (
-          <div className="grid lg:grid-cols-5 gap-6">
-            {/* Top result hero (Spotify uses a 2/5 column on desktop) */}
-            <section className="lg:col-span-2">
-              <h2 className="text-2xl font-bold mb-4">Top result</h2>
-              <div
-                onClick={() => handleRowPlay(top)}
-                className="group relative bg-card/50 hover:bg-card rounded-lg p-5 cursor-pointer transition-colors"
-              >
-                <img
-                  src={top.artwork}
-                  alt={top.title}
-                  className="w-24 h-24 rounded-md object-cover shadow-xl mb-5"
-                  onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")}
-                />
-                <h3 className="text-3xl font-bold truncate mb-2">{top.title}</h3>
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="text-muted-foreground truncate">{top.artist}</span>
-                  <span className="px-2 py-0.5 rounded-full bg-secondary text-foreground/80 text-[11px] font-semibold uppercase tracking-wide">Song</span>
-                  {topLang && (
-                    <span className={cn("inline-flex items-center px-2 py-0.5 rounded-full border text-[10px] font-medium", LANG_COLORS[topLang])}>
-                      {LANG_LABEL[topLang]}
-                    </span>
-                  )}
-                </div>
-                {/* Floating play button — appears on hover, Spotify-style */}
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleRowPlay(top); }}
-                  className="absolute bottom-5 right-5 h-12 w-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all"
-                  aria-label={current?.id === top.id && isPlaying ? "Pause" : "Play"}
-                >
-                  {current?.id === top.id && isPlaying
-                    ? <Pause className="w-5 h-5 fill-current" />
-                    : <Play className="w-5 h-5 fill-current ml-0.5" />}
-                </button>
+          <section>
+            <h2 className="text-2xl font-bold mb-4">Top result</h2>
+            <div
+              onClick={() => handleRowPlay(top)}
+              className="group relative bg-card/50 hover:bg-card rounded-lg p-5 cursor-pointer transition-colors max-w-2xl"
+            >
+              <img
+                src={top.artwork}
+                alt={top.title}
+                className="w-24 h-24 rounded-md object-cover shadow-xl mb-5"
+                onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")}
+              />
+              <h3 className="text-3xl font-bold truncate mb-2">{top.title}</h3>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-muted-foreground truncate">{top.artist}</span>
+                <span className="px-2 py-0.5 rounded-full bg-secondary text-foreground/80 text-[11px] font-semibold uppercase tracking-wide">Song</span>
+                {topLang && (
+                  <span className={cn("inline-flex items-center px-2 py-0.5 rounded-full border text-[10px] font-medium", LANG_COLORS[topLang])}>
+                    {LANG_LABEL[topLang]}
+                  </span>
+                )}
               </div>
-            </section>
-
-          </div>
+              <button
+                onClick={(e) => { e.stopPropagation(); handleRowPlay(top); }}
+                className="absolute bottom-5 right-5 h-12 w-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all"
+                aria-label={current?.id === top.id && isPlaying ? "Pause" : "Play"}
+              >
+                {current?.id === top.id && isPlaying
+                  ? <Pause className="w-5 h-5 fill-current" />
+                  : <Play className="w-5 h-5 fill-current ml-0.5" />}
+              </button>
+            </div>
+          </section>
         )}
 
         {/* Full songs list below the Top result */}
