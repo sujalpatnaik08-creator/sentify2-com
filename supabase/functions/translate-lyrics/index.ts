@@ -51,9 +51,13 @@ Deno.serve(async (req) => {
       );
     }
 
+    const isHinglish = /^hinglish$/i.test(targetLanguage);
+    const langInstruction = isHinglish
+      ? "Translate the user's lyrics into Hinglish — that is, Hindi written in the Latin/Roman alphabet (NOT Devanagari). Use natural, conversational spelling that Hindi speakers commonly use online (e.g. 'tum mere paas ho')."
+      : `Translate the user's lyrics into ${targetLanguage}.`;
     const sys =
-      `You are a professional song-lyrics translator. Translate the user's lyrics into ${targetLanguage}.` +
-      (romanize
+      `You are a professional song-lyrics translator. ${langInstruction}` +
+      (romanize && !isHinglish
         ? " Also include a romanized (latin script) transliteration on the line below each translated line, prefixed with '~ '."
         : "") +
       " Preserve line breaks. Do NOT add explanations, intros, notes, asterisks, or markdown. Output ONLY the translated lyrics line-by-line.";
