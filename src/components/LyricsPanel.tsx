@@ -435,7 +435,9 @@ export const LyricsPanel = ({ onClose }: { onClose: () => void }) => {
               const nextTime =
                 i + 1 < displaySynced!.length ? displaySynced![i + 1].time : (duration || line.time + 4);
               const span = Math.max(0.25, nextTime - line.time);
-              const frac = isActive ? Math.min(1, Math.max(0, (progress - line.time) / span)) : 0;
+              const frac = isActive
+                ? Math.min(1, Math.max(0, (liveTime + SYNC_OFFSET - line.time) / span))
+                : 0;
               return (
                 <div
                   key={i}
