@@ -127,12 +127,14 @@
     --sidebar-ring: 295 85% 52%;
   }
 
-  /* Subtle multi-hue background wash in light mode */
+  /* Vibrant multi-hue background wash in light mode */
   .light body {
     background:
-      radial-gradient(1100px 600px at 0% 0%, hsl(320 95% 92%) 0%, transparent 60%),
-      radial-gradient(1000px 500px at 100% 0%, hsl(195 95% 90%) 0%, transparent 60%),
-      radial-gradient(900px 500px at 50% 100%, hsl(50 100% 90%) 0%, transparent 60%),
+      radial-gradient(900px 520px at 0% 0%, hsl(320 100% 86%) 0%, transparent 60%),
+      radial-gradient(900px 520px at 100% 0%, hsl(195 100% 84%) 0%, transparent 60%),
+      radial-gradient(800px 500px at 50% 40%, hsl(50 100% 84%) 0%, transparent 60%),
+      radial-gradient(900px 540px at 0% 100%, hsl(150 90% 82%) 0%, transparent 60%),
+      radial-gradient(900px 540px at 100% 100%, hsl(265 100% 88%) 0%, transparent 60%),
       hsl(var(--background));
     background-attachment: fixed;
   }
