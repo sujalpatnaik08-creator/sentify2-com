@@ -30,6 +30,7 @@ const TRANSLATE_LANGS: { code: string; label: string }[] = [
   { code: "off", label: "Original" },
   { code: "English", label: "English" },
   { code: "Hindi", label: "Hindi (हिन्दी)" },
+  { code: "Hinglish", label: "Hinglish (Hindi in Roman)" },
   { code: "Odia", label: "Odia (ଓଡ଼ିଆ)" },
   { code: "Bengali", label: "Bengali (বাংলা)" },
   { code: "Tamil", label: "Tamil (தமிழ்)" },
