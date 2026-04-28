@@ -53,7 +53,7 @@ const TRANSLATE_LANGS: { code: string; label: string }[] = [
 ];
 
 export const LyricsPanel = ({ onClose }: { onClose: () => void }) => {
-  const { current, progress, duration, seek } = usePlayer();
+  const { current, progress, duration, isPlaying, seek } = usePlayer();
   const [plain, setPlain] = useState<string | null>(null);
   const [synced, setSynced] = useState<LyricLine[] | null>(null);
   const [status, setStatus] = useState<Status>("idle");
@@ -121,16 +121,55 @@ export const LyricsPanel = ({ onClose }: { onClose: () => void }) => {
     return plain;
   }, [translatedPlain, plain, targetLang]);
 
-  const activeIdx = (() => {
+  // ---------- High-frequency local clock for buttery sync ----------
+  // The engine only pushes `progress` at ~4 Hz. To make line transitions feel
+  // perfectly synchronized with the audio (and to animate the per-line
+  // progress bar smoothly), we extrapolate the current playback time locally
+  // using requestAnimationFrame, anchored to the latest store update.
+  const baseRef = useRef<{ at: number; t: number; playing: boolean }>({
+    at: performance.now(),
+    t: progress,
+    playing: isPlaying,
+  });
+  // Re-anchor on every store update so we never drift more than 1 tick.
+  useEffect(() => {
+    baseRef.current = { at: performance.now(), t: progress, playing: isPlaying };
+  }, [progress, isPlaying, current?.id]);
+
+  const [liveTime, setLiveTime] = useState(progress);
+  useEffect(() => {
+    let raf = 0;
+    const loop = () => {
+      const b = baseRef.current;
+      const dt = b.playing ? (performance.now() - b.at) / 1000 : 0;
+      const t = b.t + dt;
+      // Only update React state when the visible value actually changes.
+      setLiveTime((prev) => (Math.abs(prev - t) > 0.03 ? t : prev));
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  // Small look-ahead compensates for audio output + render latency so the
+  // highlighted line lands on the beat the listener actually hears.
+  const SYNC_OFFSET = 0.18;
+
+  // Binary search for the last line whose time <= liveTime + offset.
+  const activeIdx = useMemo(() => {
     const arr = displaySynced;
     if (!arr || arr.length === 0) return -1;
-    let idx = -1;
-    for (let i = 0; i < arr.length; i++) {
-      if (arr[i].time <= progress + 0.05) idx = i;
-      else break;
+    const t = liveTime + SYNC_OFFSET;
+    let lo = 0;
+    let hi = arr.length - 1;
+    let ans = -1;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      if (arr[mid].time <= t) { ans = mid; lo = mid + 1; }
+      else hi = mid - 1;
     }
-    return idx;
-  })();
+    return ans;
+  }, [displaySynced, liveTime]);
 
   const scrollToActive = (smooth = true) => {
     activeLineRef.current?.scrollIntoView({
@@ -139,8 +178,12 @@ export const LyricsPanel = ({ onClose }: { onClose: () => void }) => {
     });
   };
 
+  // Only scroll when the active line index actually changes — not on every
+  // rAF tick — so the panel doesn't fight the user's manual scroll.
+  const lastScrolledIdx = useRef(-1);
   useEffect(() => {
-    if (autoScroll && mode === "synced" && activeIdx >= 0) {
+    if (autoScroll && mode === "synced" && activeIdx >= 0 && activeIdx !== lastScrolledIdx.current) {
+      lastScrolledIdx.current = activeIdx;
       scrollToActive(true);
     }
   }, [activeIdx, autoScroll, mode]);
