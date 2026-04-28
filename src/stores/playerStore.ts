@@ -43,6 +43,7 @@ export const usePlayerStore = create<PlayerState>((set) => ({
   crossfadeSec: 5,
   normalize: true,
   autoplayContinuity: true,
+  audioEnhance: true,
 
   _set: (patch) => set(patch),
   _setQueue: (q) => set({ queue: q }),
