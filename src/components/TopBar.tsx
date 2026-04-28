@@ -1,22 +1,45 @@
-import { Headphones, LogIn, LogOut, Mic, MicOff, Moon, Search as SearchIcon, Sun, User, Zap, History, Loader2 } from "lucide-react";
+import {
+  Headphones,
+  LogIn,
+  LogOut,
+  Mic,
+  MicOff,
+  Moon,
+  Search as SearchIcon,
+  Sun,
+  User,
+  Zap,
+  History,
+  Loader2,
+  Settings,
+  X,
+  Sparkles,
+} from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { addSearchHistory, getPerfMode, getSearchHistory, setPerfMode } from "@/lib/user-prefs";
+import {
+  addSearchHistory,
+  clearSearchHistory,
+  getPerfMode,
+  getSearchHistory,
+  setPerfMode,
+} from "@/lib/user-prefs";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
+import { usePlayer } from "@/contexts/PlayerContext";
 import { suggestQueries } from "@/lib/music-api";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuLabel,
-} from "@/components/ui/dropdown-menu";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 export const TopBar = () => {
   const navigate = useNavigate();
@@ -24,6 +47,16 @@ export const TopBar = () => {
   const [q, setQ] = useState("");
   const { user, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const {
+    crossfadeSec,
+    normalize,
+    autoplayContinuity,
+    audioEnhance,
+    setCrossfade,
+    setNormalize,
+    setAutoplayContinuity,
+    setAudioEnhance,
+  } = usePlayer();
   const [perf, setPerf] = useState(getPerfMode());
   const [listening, setListening] = useState(false);
   const [identifying, setIdentifying] = useState(false);
@@ -37,7 +70,6 @@ export const TopBar = () => {
     typeof window !== "undefined" &&
     !!((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
 
-  // Sync from URL when on /search
   useEffect(() => {
     if (loc.pathname === "/search") {
       const params = new URLSearchParams(loc.search);
@@ -45,14 +77,12 @@ export const TopBar = () => {
     }
   }, [loc.pathname, loc.search]);
 
-  // Persist completed queries to history (debounced)
   useEffect(() => {
     if (!q.trim() || q.trim().length < 2) return;
     const id = setTimeout(() => addSearchHistory(q), 1200);
     return () => clearTimeout(id);
   }, [q]);
 
-  // Predictive autocomplete: debounce and merge recent history
   useEffect(() => {
     const v = q.trim();
     if (!v) {
@@ -75,7 +105,6 @@ export const TopBar = () => {
     return () => clearTimeout(id);
   }, [q]);
 
-  // Close suggestions on outside click
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
       if (!wrapRef.current?.contains(e.target as Node)) setShowSuggest(false);
@@ -102,27 +131,31 @@ export const TopBar = () => {
     addSearchHistory(s);
   };
 
-  // ---- Shazam-style identify (record ~6s and call recognize-song) ----
+  const clearSearch = () => {
+    setQ("");
+    setSuggestions([]);
+    clearSearchHistory();
+    setShowSuggest(false);
+    if (loc.pathname === "/search") {
+      navigate("/search", { replace: true });
+    }
+    toast({ title: "Search cleared", description: "History and current query cleared." });
+  };
+
   const startIdentify = async (mode: "recognize" | "hum") => {
     if (identifying) {
       mediaRecRef.current?.stop();
       return;
     }
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
-      toast({
-        title: "Not supported",
-        description: "Audio recording isn't supported in this browser.",
-      });
+      toast({ title: "Not supported", description: "Audio recording isn't supported in this browser." });
       return;
     }
     let stream: MediaStream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch {
-      toast({
-        title: "Microphone blocked",
-        description: "Allow microphone access to identify songs.",
-      });
+      toast({ title: "Microphone blocked", description: "Allow microphone access to identify songs." });
       return;
     }
     const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
@@ -142,7 +175,6 @@ export const TopBar = () => {
         toast({ title: "Sample too short", description: "Try again with a clearer sample." });
         return;
       }
-      // base64 encode
       const buf = new Uint8Array(await blob.arrayBuffer());
       let binary = "";
       for (let i = 0; i < buf.length; i++) binary += String.fromCharCode(buf[i]);
@@ -158,19 +190,13 @@ export const TopBar = () => {
           return;
         }
         if (data?.match?.searchQuery) {
-          toast({
-            title: `Found: ${data.match.title}`,
-            description: data.match.artist || "",
-          });
+          toast({ title: `Found: ${data.match.title}`, description: data.match.artist || "" });
           onChange(data.match.searchQuery);
         } else {
           toast({ title: "No match found", description: "Try a louder or longer sample." });
         }
       } catch (e: any) {
-        toast({
-          title: "Recognition failed",
-          description: e?.message || "Please try again.",
-        });
+        toast({ title: "Recognition failed", description: e?.message || "Please try again." });
       }
     };
     setIdentifying(true);
@@ -182,15 +208,11 @@ export const TopBar = () => {
     setTimeout(() => { try { rec.state === "recording" && rec.stop(); } catch { /* */ } }, 6000);
   };
 
-  // ---- Voice search (Web Speech API) ----
   const startVoiceSearch = async () => {
     const SR: any =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SR) {
-      toast({
-        title: "Voice search not supported",
-        description: "Try Chrome, Edge or Safari — meanwhile you can type your search.",
-      });
+      toast({ title: "Voice search not supported", description: "Try Chrome, Edge or Safari." });
       return;
     }
     if (listening && recognitionRef._sr) {
@@ -222,17 +244,7 @@ export const TopBar = () => {
         .trim();
       if (text) onChange(text);
     };
-    sr.onerror = (e: any) => {
-      setListening(false);
-      const err = e?.error || "";
-      if (err === "not-allowed" || err === "service-not-allowed") {
-        toast({ title: "Microphone blocked", description: "Enable mic permission." });
-      } else if (err === "no-speech") {
-        toast({ title: "Didn't catch that", description: "No speech detected — try again." });
-      } else if (err && err !== "aborted") {
-        toast({ title: "Voice search error", description: String(err) });
-      }
-    };
+    sr.onerror = () => setListening(false);
     sr.onend = () => { setListening(false); };
     try { sr.start(); } catch { setListening(false); }
   };
@@ -271,9 +283,23 @@ export const TopBar = () => {
           onFocus={() => setShowSuggest(true)}
           onKeyDown={onKeyDown}
           placeholder="Search songs, artists, albums…"
-          className="pl-11 pr-24 h-11 bg-secondary/60 border border-border/60 rounded-full focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary/40 text-sm"
+          className="pl-11 pr-32 h-11 bg-secondary/60 border border-border rounded-full focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary/40 text-sm"
         />
-        {/* Identify (Shazam-style) */}
+        {/* Clear button */}
+        {(q || getSearchHistory().length > 0) && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={clearSearch}
+            className="absolute right-20 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full text-muted-foreground hover:text-foreground"
+            aria-label="Clear search and history"
+            title="Clear search and history"
+          >
+            <X className="w-4 h-4" />
+          </Button>
+        )}
+        {/* Identify */}
         <Button
           type="button"
           variant="ghost"
@@ -281,7 +307,7 @@ export const TopBar = () => {
           onClick={() => startIdentify("recognize")}
           className={`absolute right-10 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full ${identifying ? "text-primary animate-pulse" : "text-muted-foreground"}`}
           aria-label={identifying ? "Stop listening" : "Identify song playing nearby"}
-          title={identifying ? "Listening… (recording 6s)" : "Identify a song playing nearby (or click & hum)"}
+          title={identifying ? "Listening… (recording 6s)" : "Identify a song (right-click to hum)"}
           onContextMenu={(e) => { e.preventDefault(); startIdentify("hum"); }}
         >
           {identifying ? <Loader2 className="w-4 h-4 animate-spin" /> : <Headphones className="w-4 h-4" />}
@@ -295,14 +321,13 @@ export const TopBar = () => {
           onClick={startVoiceSearch}
           className={`absolute right-1.5 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full ${listening ? "text-primary animate-pulse" : "text-muted-foreground"} ${!speechSupported ? "opacity-40 cursor-not-allowed" : ""}`}
           aria-label={listening ? "Stop voice search" : "Voice search"}
-          title={!speechSupported ? "Voice search isn't supported in this browser" : listening ? "Listening… click to stop" : "Voice search"}
+          title={listening ? "Listening… click to stop" : "Voice search"}
         >
           {listening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
         </Button>
 
-        {/* Autocomplete dropdown */}
         {showSuggest && suggestions.length > 0 && (
-          <div className="absolute left-0 right-0 mt-2 bg-popover border border-border/60 rounded-xl shadow-2xl overflow-hidden z-30">
+          <div className="absolute left-0 right-0 mt-2 bg-popover border border-border rounded-xl shadow-2xl overflow-hidden z-30">
             <ul className="py-1 max-h-80 overflow-y-auto">
               {suggestions.map((s, i) => {
                 const isHist = !q.trim() || getSearchHistory().some((h) => h.toLowerCase() === s.toLowerCase());
@@ -330,50 +355,131 @@ export const TopBar = () => {
       </div>
 
       <div className="ml-auto flex items-center gap-2">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => { const next = !perf; setPerf(next); setPerfMode(next); }}
-          className={`rounded-full h-9 w-9 bg-secondary/60 hover:bg-secondary border border-border/60 ${perf ? "text-primary" : ""}`}
-          aria-label={perf ? "Disable Performance Mode" : "Enable Performance Mode"}
-          title={perf ? "Performance Mode: ON (low latency)" : "Performance Mode: OFF"}
-        >
-          <Zap className={`w-4 h-4 ${perf ? "fill-current" : ""}`} />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={toggleTheme}
-          className="rounded-full h-9 w-9 bg-secondary/60 hover:bg-secondary border border-border/60"
-          aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-          title={theme === "dark" ? "Light mode" : "Dark mode"}
-        >
-          {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-        </Button>
-        {user ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="rounded-full h-9 w-9 bg-secondary/60 hover:bg-secondary border border-border/50"
-                aria-label="Account"
-              >
-                <User className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel className="truncate">{user.email}</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => navigate("/library")}>Your library</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate("/downloads")}>Downloads</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={signOut} className="text-destructive">
-                <LogOut className="w-4 h-4 mr-2" /> Sign out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : (
+        {/* Unified Settings menu */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full h-9 w-9 bg-secondary/60 hover:bg-secondary border border-border"
+              aria-label="Settings"
+              title="Settings"
+            >
+              <Settings className="w-4 h-4" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-80 p-0">
+            <div className="px-4 py-3 border-b border-border">
+              <h4 className="font-semibold text-sm">Settings</h4>
+              <p className="text-xs text-muted-foreground">Playback, performance & account</p>
+            </div>
+
+            {/* Theme */}
+            <div className="px-4 py-3 border-b border-border space-y-2">
+              <h5 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Appearance</h5>
+              <div className="flex items-center justify-between">
+                <Label className="text-sm flex items-center gap-2">
+                  {theme === "dark" ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+                  {theme === "dark" ? "Dark mode" : "Light mode"}
+                </Label>
+                <Switch checked={theme === "light"} onCheckedChange={toggleTheme} />
+              </div>
+            </div>
+
+            {/* Performance */}
+            <div className="px-4 py-3 border-b border-border space-y-2">
+              <h5 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Performance</h5>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-sm flex items-center gap-2">
+                    <Zap className="w-4 h-4" /> Performance mode
+                  </Label>
+                  <p className="text-[10px] text-muted-foreground">Lower latency, faster preloads</p>
+                </div>
+                <Switch
+                  checked={perf}
+                  onCheckedChange={(v) => { setPerf(v); setPerfMode(v); }}
+                />
+              </div>
+            </div>
+
+            {/* Playback */}
+            <div className="px-4 py-3 border-b border-border space-y-3">
+              <h5 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Playback</h5>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="xf-top" className="text-sm">Crossfade</Label>
+                  <span className="text-xs text-muted-foreground tabular-nums">
+                    {crossfadeSec === 0 ? "Off" : `${crossfadeSec}s`}
+                  </span>
+                </div>
+                <Slider id="xf-top" value={[crossfadeSec]} min={0} max={12} step={1}
+                  onValueChange={(v) => setCrossfade(v[0])} />
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="norm-top" className="text-sm">Audio normalization</Label>
+                  <p className="text-[10px] text-muted-foreground">~−14 LUFS target</p>
+                </div>
+                <Switch id="norm-top" checked={normalize} onCheckedChange={setNormalize} />
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="auto-top" className="text-sm">Autoplay similar songs</Label>
+                  <p className="text-[10px] text-muted-foreground">When the queue ends</p>
+                </div>
+                <Switch id="auto-top" checked={autoplayContinuity} onCheckedChange={setAutoplayContinuity} />
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="enh-top" className="text-sm flex items-center gap-2">
+                    <Sparkles className="w-4 h-4" /> Audio enhancer
+                  </Label>
+                  <p className="text-[10px] text-muted-foreground">Auto EQ, compression & widening</p>
+                </div>
+                <Switch id="enh-top" checked={audioEnhance} onCheckedChange={setAudioEnhance} />
+              </div>
+            </div>
+
+            {/* Account */}
+            <div className="px-4 py-3 space-y-2">
+              <h5 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Account</h5>
+              {user ? (
+                <>
+                  <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                  <div className="flex flex-col gap-1">
+                    <Button variant="ghost" size="sm" className="justify-start h-8" onClick={() => navigate("/library")}>
+                      Your library
+                    </Button>
+                    <Button variant="ghost" size="sm" className="justify-start h-8" onClick={() => navigate("/downloads")}>
+                      Downloads
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={signOut}
+                      className="justify-start h-8 text-destructive hover:text-destructive"
+                    >
+                      <LogOut className="w-4 h-4 mr-2" /> Sign out
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <Button
+                  onClick={() => navigate("/auth")}
+                  size="sm"
+                  className="w-full gap-1.5 font-semibold"
+                >
+                  <LogIn className="w-4 h-4" />
+                  Log in
+                </Button>
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
+
+        {/* Quick login button when signed-out */}
+        {!user && (
           <Button
             onClick={() => navigate("/auth")}
             size="sm"
