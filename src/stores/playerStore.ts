@@ -22,6 +22,7 @@ export interface PlayerState {
   crossfadeSec: number;       // 0 = off, default 5
   normalize: boolean;         // ReplayGain-style ~-14 LUFS target
   autoplayContinuity: boolean; // auto-fetch similar tracks when queue ends
+  audioEnhance: boolean;       // automated EQ + compressor + stereo widener
 
   // setters used by the engine
   _set: (patch: Partial<PlayerState>) => void;
