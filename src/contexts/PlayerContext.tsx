@@ -45,6 +45,7 @@ export function usePlayer() {
   const crossfadeSec = usePlayerStore((s) => s.crossfadeSec);
   const normalize = usePlayerStore((s) => s.normalize);
   const autoplayContinuity = usePlayerStore((s) => s.autoplayContinuity);
+  const audioEnhance = usePlayerStore((s) => s.audioEnhance);
 
   // Stable action handles.
   const actions = useMemo(() => {
@@ -63,12 +64,13 @@ export function usePlayer() {
       setCrossfade: (sec: number) => { setCrossfadeSec(sec); engine.setCrossfade(sec); },
       setNormalize: (on: boolean) => { setNormalize(on); engine.setNormalize(on); },
       setAutoplayContinuity: (on: boolean) => { setAutoplayContinuity(on); engine.setAutoplayContinuity(on); },
+      setAudioEnhance: (on: boolean) => { engine.setAudioEnhance(on); },
     };
   }, []);
 
   return {
     current, queue, history, isPlaying, progress, duration, volume,
-    shuffle, repeat, crossfadeSec, normalize, autoplayContinuity,
+    shuffle, repeat, crossfadeSec, normalize, autoplayContinuity, audioEnhance,
     ...actions,
   };
 }
