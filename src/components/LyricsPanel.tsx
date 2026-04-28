@@ -62,7 +62,6 @@ export const LyricsPanel = ({ onClose }: { onClose: () => void }) => {
 
   // Translation state
   const [targetLang, setTargetLang] = useState<string>("off");
-  const [romanize, setRomanize] = useState(false);
   const [translating, setTranslating] = useState(false);
   const [translatedPlain, setTranslatedPlain] = useState<string | null>(null);
   const [translatedSynced, setTranslatedSynced] = useState<LyricLine[] | null>(
