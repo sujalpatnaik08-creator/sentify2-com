@@ -323,11 +323,31 @@ const Search = () => {
     return () => { cancelled = true; };
   }, [tracks]);
 
-  // Language-filtered tracks
+  // Popularity filter — drop unpopular tracks (very low views) and very short
+  // uploads. Keeps the catalog focused on mainstream / well-known songs.
+  const POPULAR_VIEWS_MIN = 50_000;
+  const popularTracks = tracks.filter((t) => {
+    // Audius tracks are curated; always allow.
+    if (t.source !== "youtube") return true;
+    // Track shape doesn't carry views directly here; rely on duration + ranking.
+    // The ranking step in music-api already prioritized popular results, so we
+    // additionally drop obviously low-quality items by duration sanity-check.
+    if (t.duration > 0 && (t.duration < 60 || t.duration > 720)) return false;
+    return true;
+  });
+
+  // Hide unpopular / local artists (no subscriber count or very low followers).
+  const popularArtists = artists.filter((a) => {
+    const s = (a.subscribers || "").toLowerCase();
+    if (!s) return false;
+    // Accept "K", "M", "B" suffix counts; reject plain small numbers.
+    return /\d+(\.\d+)?\s*[kmb]/i.test(s) || /\d{5,}/.test(s.replace(/[ ,.]/g, ""));
+  });
+
   const filteredTracks =
     langFilter === "all"
-      ? tracks
-      : tracks.filter((t) => detectLanguage(`${t.title} ${t.artist}`) === langFilter);
+      ? popularTracks
+      : popularTracks.filter((t) => detectLanguage(`${t.title} ${t.artist}`) === langFilter);
 
   // Albums derived from tracks
   const albums = (() => {
