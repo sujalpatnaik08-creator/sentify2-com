@@ -485,7 +485,7 @@ const Search = () => {
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); onDownload(t); }}
-                          className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="text-muted-foreground hover:text-destructive transition-opacity"
                           aria-label="Remove download"
                           title="Remove download"
                         >
@@ -495,12 +495,13 @@ const Search = () => {
                     ) : (
                       <button
                         onClick={(e) => { e.stopPropagation(); onDownload(t); }}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
+                        className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
                         aria-label="Download"
                         title={t.source === "youtube" ? "YouTube tracks are stream-only" : "Save offline"}
                         disabled={t.source === "youtube"}
                       >
                         <Download className="w-4 h-4" />
+                        <span className="text-[11px] font-medium hidden sm:inline">Download</span>
                       </button>
                     )}
                   </td>
@@ -508,13 +509,14 @@ const Search = () => {
                     <button
                       onClick={() => toggleTrackLyrics(t)}
                       className={cn(
-                        "opacity-0 group-hover:opacity-100 transition-opacity",
-                        isExpanded && "opacity-100 text-primary",
+                        "inline-flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors",
+                        isExpanded && "text-primary",
                       )}
                       aria-label={isExpanded ? "Hide lyrics" : "Show lyrics"}
                       title={isExpanded ? "Hide lyrics" : "Fetch lyrics"}
                     >
                       {isExpanded ? <ChevronUp className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
+                      <span className="text-[11px] font-medium hidden sm:inline">{isExpanded ? "Hide" : "Lyrics"}</span>
                     </button>
                   </td>
                   <td className="py-2 px-3 text-right text-muted-foreground tabular-nums">{fmt(t.duration)}</td>
