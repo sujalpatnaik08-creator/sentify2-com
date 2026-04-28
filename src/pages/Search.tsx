@@ -549,12 +549,12 @@ const Search = () => {
   );
 
   const renderArtists = () => {
-    if (artists.length === 0) {
-      return <p className="text-muted-foreground text-sm">No artists found for this query.</p>;
+    if (popularArtists.length === 0) {
+      return <p className="text-muted-foreground text-sm">No popular artists found for this query.</p>;
     }
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-        {artists.map((a) => (
+        {popularArtists.map((a) => (
           <button
             key={a.id}
             onClick={() => goToArtist(a)}
