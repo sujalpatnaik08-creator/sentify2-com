@@ -701,114 +701,11 @@ const Search = () => {
           </div>
         )}
 
-        {/* Artists row */}
-        {artists.length > 0 && (
+        {/* Full songs list below the Top result */}
+        {filteredTracks.length > 0 && (
           <section>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold">Artists</h2>
-              <button
-                onClick={() => setTab("artists")}
-                className="text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Show all
-              </button>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {artists.slice(0, 6).map((a) => (
-                <button
-                  key={a.id}
-                  onClick={() => goToArtist(a)}
-                  className="flex flex-col items-center gap-3 p-4 rounded-lg bg-card/40 hover:bg-card transition-colors text-center"
-                >
-                  <img
-                    src={a.thumbnail}
-                    alt={a.name}
-                    className="w-full aspect-square rounded-full object-cover shadow-lg"
-                    onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")}
-                  />
-                  <div className="min-w-0 w-full">
-                    <div className="font-semibold truncate">{a.name}</div>
-                    <div className="text-xs text-muted-foreground truncate">Artist</div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Albums row */}
-        {albums.length > 0 && (
-          <section>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold">Albums</h2>
-              <button
-                onClick={() => setTab("albums")}
-                className="text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Show all
-              </button>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {albums.slice(0, 6).map((al) => {
-                const albumTracks = filteredTracks.filter(
-                  (t) => (t.album?.trim() || t.title) === al.name && t.artist === al.artist,
-                );
-                return (
-                  <button
-                    key={`${al.name}-${al.artist}`}
-                    onClick={() => albumTracks[0] && playTrack(albumTracks[0], albumTracks)}
-                    className="flex flex-col gap-3 p-3 rounded-lg bg-card/40 hover:bg-card transition-colors text-left"
-                  >
-                    <img
-                      src={al.artwork}
-                      alt={al.name}
-                      className="w-full aspect-square rounded-md object-cover shadow-lg"
-                      onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")}
-                    />
-                    <div className="min-w-0">
-                      <div className="font-semibold truncate">{al.name}</div>
-                      <div className="text-xs text-muted-foreground truncate">{al.artist}</div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-        )}
-
-        {/* Playlists row */}
-        {playlists.length > 0 && (
-          <section>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold">Playlists</h2>
-              <button
-                onClick={() => setTab("playlists")}
-                className="text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Show all
-              </button>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {playlists.slice(0, 6).map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => navigate(`/search?q=${encodeURIComponent(p.title)}`)}
-                  className="flex flex-col gap-3 p-3 rounded-lg bg-card/40 hover:bg-card transition-colors text-left"
-                >
-                  <div className="relative w-full aspect-square rounded-md overflow-hidden shadow-lg bg-muted">
-                    <img src={p.thumbnail} alt={p.title} className="w-full h-full object-cover"
-                      onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")} />
-                    <div className="absolute bottom-1.5 right-1.5 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded">
-                      {p.videoCount} tracks
-                    </div>
-                  </div>
-                  <div className="min-w-0">
-                    <div className="font-semibold truncate">{p.title}</div>
-                    <div className="text-xs text-muted-foreground truncate">{p.author || "Playlist"}</div>
-                  </div>
-                </button>
-              ))}
-            </div>
+            <h2 className="text-2xl font-bold mb-4">Songs</h2>
+            {renderTracksTable(filteredTracks)}
           </section>
         )}
       </div>
