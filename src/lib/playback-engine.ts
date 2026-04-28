@@ -627,6 +627,14 @@ class PlaybackEngine {
   setAutoplayContinuity(on: boolean) {
     usePlayerStore.getState()._set({ autoplayContinuity: on });
   }
+  // Automated audio enhancer (EQ + compressor + stereo widener).
+  setAudioEnhance(on: boolean) {
+    this.enhanceOn = on;
+    try { localStorage.setItem("sentify_audio_enhance", on ? "1" : "0"); } catch { /* */ }
+    usePlayerStore.getState()._set({ audioEnhance: on });
+    this.applyEnhancerMix();
+  }
+  isAudioEnhanceOn(): boolean { return this.enhanceOn; }
 
   // ------- Internals -------
   private handleEnd() {
