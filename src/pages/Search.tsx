@@ -766,49 +766,28 @@ const Search = () => {
         </div>
       )}
 
-      {/* Filter chips */}
-      {q && (tracks.length > 0 || artists.length > 0 || playlists.length > 0) && (
-        <>
-          <div className="flex items-center gap-2 flex-wrap mb-4">
-            {TABS.map((t) => {
-              const Icon = t.icon;
-              return (
-                <button
-                  key={t.id}
-                  onClick={() => setTab(t.id)}
-                  className={cn(
-                    "inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-colors border",
-                    tab === t.id
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-secondary/60 text-muted-foreground border-border hover:text-foreground hover:bg-secondary"
-                  )}
-                >
-                  <Icon className="w-3.5 h-3.5" />
-                  {t.label}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Language filter */}
-          <div className="flex items-center gap-2 flex-wrap mb-6 text-xs">
-            <span className="text-muted-foreground">Language:</span>
-            {(["all", "english", "hindi", "spanish", "korean", "japanese", "arabic"] as const).map((l) => (
-              <button
-                key={l}
-                onClick={() => setLangFilter(l)}
-                className={cn(
-                  "px-2.5 py-0.5 rounded-full border transition-colors",
-                  langFilter === l
-                    ? "bg-foreground text-background border-foreground"
-                    : "bg-transparent text-muted-foreground border-border/60 hover:text-foreground hover:border-border"
-                )}
-              >
-                {l === "all" ? "All" : LANG_LABEL[l as Language]}
-              </button>
-            ))}
-          </div>
-        </>
+      {/* Compact popularity + language filter */}
+      {q && (tracks.length > 0) && (
+        <div className="flex items-center gap-2 flex-wrap mb-6 text-xs">
+          <span className="px-2.5 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/40 font-medium">
+            Popular only
+          </span>
+          <span className="text-muted-foreground ml-2">Language:</span>
+          {(["all", "english", "hindi", "spanish", "korean", "japanese", "arabic"] as const).map((l) => (
+            <button
+              key={l}
+              onClick={() => setLangFilter(l)}
+              className={cn(
+                "px-2.5 py-0.5 rounded-full border transition-colors",
+                langFilter === l
+                  ? "bg-foreground text-background border-foreground"
+                  : "bg-transparent text-muted-foreground border-border hover:text-foreground"
+              )}
+            >
+              {l === "all" ? "All" : LANG_LABEL[l as Language]}
+            </button>
+          ))}
+        </div>
       )}
 
       {loading && (
