@@ -213,6 +213,9 @@ async function youtubeSearchAll(query: string, limit: number): Promise<SearchRes
     .slice(0, limit)
     .map(mapYtVideo);
 
+  // Feed Voyager so subsequent typeahead is instant + typo-tolerant.
+  rankedTracks.forEach((t, i) => indexTrackForSearch(t.title, t.artist, rankedTracks.length - i));
+
   return {
     tracks: rankedTracks,
     artists: [...channels, ...extraChannels].slice(0, 12).map((c) => ({
@@ -235,11 +238,13 @@ async function youtubeSearchAll(query: string, limit: number): Promise<SearchRes
 async function youtubeSearchVideos(query: string, limit: number): Promise<Track[]> {
   const items = await fetchYt(query, "music", limit);
   const videos = items.filter((i): i is YtVideo => i.type === "video");
-  return videos
+  const tracks = videos
     .filter(isLikelyMusic)
     .sort((a, b) => scoreTrack(b, query) - scoreTrack(a, query))
     .slice(0, limit)
     .map(mapYtVideo);
+  tracks.forEach((t, i) => indexTrackForSearch(t.title, t.artist, tracks.length - i));
+  return tracks;
 }
 
 // ---------- Autocomplete suggestions (Spotify-like predictive search) ----------
