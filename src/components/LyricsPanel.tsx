@@ -5,7 +5,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Loader2,
   X,
-  Crosshair,
   AlignLeft,
   ListMusic,
   Languages,
