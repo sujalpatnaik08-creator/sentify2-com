@@ -149,7 +149,7 @@ export const LyricsPanel = ({ onClose }: { onClose: () => void }) => {
   const hasOriginal = !!synced || !!plain;
 
   // Run translation when target changes
-  const runTranslate = async (lang: string, withRomanize = romanize) => {
+  const runTranslate = async (lang: string) => {
     if (lang === "off") {
       setTranslatedPlain(null);
       setTranslatedSynced(null);
@@ -164,36 +164,21 @@ export const LyricsPanel = ({ onClose }: { onClose: () => void }) => {
         const joined = synced.map((l) => l.text || "♪").join("\n");
         const { data, error } = await supabase.functions.invoke(
           "translate-lyrics",
-          { body: { text: joined, targetLanguage: lang, romanize: withRomanize } },
+          { body: { text: joined, targetLanguage: lang, romanize: false } },
         );
         if (error) throw error;
         const translated = (data as { translated?: string })?.translated ?? "";
         const lines = translated.split(/\r?\n/);
-        // If romanize, AI returns 2 lines per source (translation + ~ romanized).
-        // We pair them back to timed lines best-effort.
         const out: LyricLine[] = [];
-        if (withRomanize) {
-          let srcIdx = 0;
-          for (let i = 0; i < lines.length && srcIdx < synced.length; i++) {
-            const t = lines[i] ?? "";
-            const next = lines[i + 1] ?? "";
-            const isRoman = next.trim().startsWith("~");
-            const text = isRoman ? `${t}\n${next}` : t;
-            out.push({ time: synced[srcIdx].time, text });
-            srcIdx++;
-            if (isRoman) i++;
-          }
-        } else {
-          for (let i = 0; i < synced.length; i++) {
-            out.push({ time: synced[i].time, text: lines[i] ?? "" });
-          }
+        for (let i = 0; i < synced.length; i++) {
+          out.push({ time: synced[i].time, text: lines[i] ?? "" });
         }
         setTranslatedSynced(out);
         setTranslatedPlain(out.map((l) => l.text).join("\n"));
       } else if (plain) {
         const { data, error } = await supabase.functions.invoke(
           "translate-lyrics",
-          { body: { text: plain, targetLanguage: lang, romanize: withRomanize } },
+          { body: { text: plain, targetLanguage: lang, romanize: false } },
         );
         if (error) throw error;
         const translated = (data as { translated?: string })?.translated ?? "";
@@ -225,12 +210,7 @@ export const LyricsPanel = ({ onClose }: { onClose: () => void }) => {
       setTranslatedSynced(null);
       return;
     }
-    void runTranslate(next, romanize);
-  };
-
-  const onToggleRomanize = (v: boolean) => {
-    setRomanize(v);
-    if (targetLang !== "off") void runTranslate(targetLang, v);
+    void runTranslate(next);
   };
 
   const statusLabel = (() => {
