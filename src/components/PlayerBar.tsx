@@ -206,6 +206,13 @@ export const PlayerBar = ({ onToggleLyrics, onToggleQueue, showLyrics, showQueue
                   </div>
                   <Switch id="auto" checked={autoplayContinuity} onCheckedChange={setAutoplayContinuity} />
                 </div>
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="enh" className="text-xs">Audio enhancer</Label>
+                    <p className="text-[10px] text-muted-foreground">Auto EQ, compression & stereo widening</p>
+                  </div>
+                  <Switch id="enh" checked={audioEnhance} onCheckedChange={setAudioEnhance} />
+                </div>
               </div>
             </PopoverContent>
           </Popover>
