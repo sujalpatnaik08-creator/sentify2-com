@@ -40,10 +40,6 @@ export const PlayerBar = ({ onToggleLyrics, onToggleQueue, showLyrics, showQueue
     volume,
     shuffle,
     repeat,
-    crossfadeSec,
-    normalize,
-    autoplayContinuity,
-    audioEnhance,
     togglePlay,
     next,
     prev,
@@ -51,10 +47,6 @@ export const PlayerBar = ({ onToggleLyrics, onToggleQueue, showLyrics, showQueue
     setVolume,
     toggleShuffle,
     cycleRepeat,
-    setCrossfade,
-    setNormalize,
-    setAutoplayContinuity,
-    setAudioEnhance,
   } = usePlayer();
   const [muted, setMuted] = useState(false);
 
