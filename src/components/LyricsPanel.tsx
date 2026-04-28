@@ -309,20 +309,6 @@ export const LyricsPanel = ({ onClose }: { onClose: () => void }) => {
           </button>
         </div>
 
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => {
-            setAutoScroll(true);
-            scrollToActive(true);
-          }}
-          disabled={mode !== "synced" || activeIdx < 0}
-          className="h-7 px-2 text-xs gap-1.5"
-          aria-label="Jump to current line"
-        >
-          <Crosshair className="w-3.5 h-3.5" /> Jump
-        </Button>
-
         <label className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer select-none">
           <input
             type="checkbox"
@@ -349,16 +335,6 @@ export const LyricsPanel = ({ onClose }: { onClose: () => void }) => {
             ))}
           </SelectContent>
         </Select>
-        <label className="flex items-center gap-1 text-xs text-muted-foreground cursor-pointer select-none whitespace-nowrap">
-          <input
-            type="checkbox"
-            checked={romanize}
-            onChange={(e) => onToggleRomanize(e.target.checked)}
-            className="accent-primary"
-            disabled={targetLang === "off"}
-          />
-          Romanize
-        </label>
         {targetLang !== "off" && (
           <Button
             variant="ghost"
