@@ -685,19 +685,6 @@ const Search = () => {
               </div>
             </section>
 
-            {/* Songs preview (4 rows) */}
-            <section className="lg:col-span-3">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-bold">Songs</h2>
-                <button
-                  onClick={() => setTab("songs")}
-                  className="text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Show all
-                </button>
-              </div>
-              {renderTracksTable(filteredTracks.slice(0, 4))}
-            </section>
           </div>
         )}
 
