@@ -159,8 +159,116 @@ class PlaybackEngine {
       if (v != null) this.enhanceOn = v === "1";
     } catch { /* */ }
 
+    // Restore quality / bass-boost / background prefs
+    this.quality = getSoundQuality();
+    this.bassBoostOn = getBassBoost();
+    this.bgPlayback = getBackgroundPlayback();
+
+    // React to runtime pref changes
+    window.addEventListener("sentify:sound-quality", (e: Event) => {
+      this.quality = (e as CustomEvent<SoundQuality>).detail;
+      this.applyQualityChain();
+    });
+    window.addEventListener("sentify:bass-boost", (e: Event) => {
+      this.bassBoostOn = (e as CustomEvent<boolean>).detail;
+      this.applyQualityChain();
+    });
+    window.addEventListener("sentify:bg-playback", (e: Event) => {
+      this.bgPlayback = (e as CustomEvent<boolean>).detail;
+      if (this.bgPlayback && usePlayerStore.getState().isPlaying) this.acquireWakeLock();
+      else this.releaseWakeLock();
+    });
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible" && this.bgPlayback && usePlayerStore.getState().isPlaying) {
+        this.acquireWakeLock();
+      }
+    });
+
     this.startMonitor();
     this.initYouTube();
+    this.bindMediaSession();
+  }
+
+  // -------- Wake Lock (keeps tab alive when minimized on Chromium) --------
+  private async acquireWakeLock() {
+    if (!this.bgPlayback) return;
+    try {
+      const wl = (navigator as Navigator & { wakeLock?: { request: (t: string) => Promise<WakeLockSentinel> } }).wakeLock;
+      if (!wl || this.wakeLock) return;
+      this.wakeLock = await wl.request("screen");
+      this.wakeLock.addEventListener("release", () => { this.wakeLock = null; });
+    } catch { /* not granted; ignore */ }
+  }
+  private releaseWakeLock() {
+    try { this.wakeLock?.release(); } catch { /* */ }
+    this.wakeLock = null;
+  }
+
+  // -------- Media Session: lock-screen + OS transport controls --------
+  private bindMediaSession() {
+    if (!("mediaSession" in navigator)) return;
+    try {
+      navigator.mediaSession.setActionHandler("play", () => this.togglePlay());
+      navigator.mediaSession.setActionHandler("pause", () => this.togglePlay());
+      navigator.mediaSession.setActionHandler("nexttrack", () => this.next());
+      navigator.mediaSession.setActionHandler("previoustrack", () => this.prev());
+      navigator.mediaSession.setActionHandler("seekto", (d: MediaSessionActionDetails) => {
+        if (typeof d.seekTime === "number") this.seek(d.seekTime);
+      });
+      navigator.mediaSession.setActionHandler("seekbackward", (d: MediaSessionActionDetails) => {
+        const a = d.seekOffset || 10;
+        this.seek(Math.max(0, usePlayerStore.getState().progress - a));
+      });
+      navigator.mediaSession.setActionHandler("seekforward", (d: MediaSessionActionDetails) => {
+        const a = d.seekOffset || 10;
+        this.seek(usePlayerStore.getState().progress + a);
+      });
+    } catch { /* unsupported actions ignored */ }
+  }
+
+  private updateMediaSession(track: Track) {
+    if (!("mediaSession" in navigator)) return;
+    try {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: track.title,
+        artist: track.artist,
+        album: track.artist,
+        artwork: track.artwork ? [
+          { src: track.artwork, sizes: "96x96", type: "image/jpeg" },
+          { src: track.artwork, sizes: "256x256", type: "image/jpeg" },
+          { src: track.artwork, sizes: "512x512", type: "image/jpeg" },
+        ] : [],
+      });
+    } catch { /* */ }
+  }
+
+  private updateMediaSessionState(playing: boolean) {
+    if (!("mediaSession" in navigator)) return;
+    try { navigator.mediaSession.playbackState = playing ? "playing" : "paused"; } catch { /* */ }
+  }
+
+  // -------- Quality + Bass Boost subgraph (built lazily in ensureCtx) --------
+  private buildQualityChain() {
+    if (!this.ctx) return;
+    this.qualityFilter = this.ctx.createBiquadFilter();
+    this.qualityFilter.type = "lowpass";
+    this.qualityFilter.frequency.value = 22000; // High = transparent
+    this.qualityFilter.Q.value = 0.707;
+    this.bassBoostNode = this.ctx.createBiquadFilter();
+    this.bassBoostNode.type = "lowshelf";
+    this.bassBoostNode.frequency.value = 80;
+    this.bassBoostNode.gain.value = 0;
+  }
+
+  private applyQualityChain() {
+    if (!this.ctx || !this.qualityFilter || !this.bassBoostNode) return;
+    const t = this.ctx.currentTime;
+    let cutoff = 22000;
+    if (this.quality === "medium") cutoff = 16000;
+    if (this.quality === "low") cutoff = 11000;
+    try { this.qualityFilter.frequency.setTargetAtTime(cutoff, t, 0.05); } catch { /* */ }
+    const boost = this.bassBoostOn ? 7 : 0;
+    try { this.bassBoostNode.gain.setTargetAtTime(boost, t, 0.05); } catch { /* */ }
   }
 
   // ------- WebAudio lazy init (must happen after a user gesture) -------
