@@ -12,6 +12,7 @@ import {
   Loader2,
   Settings,
   X,
+  ArrowRight,
   Sparkles,
   Volume2,
   Waves,
