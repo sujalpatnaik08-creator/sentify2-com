@@ -24,10 +24,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((_evt, s) => {
       setSession(s);
+      if (s?.user) {
+        import("@/lib/device-session").then((m) =>
+          m.registerCurrentSession(s.user.id).catch(() => { /* ignore */ })
+        );
+      }
     });
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       setLoading(false);
+      if (data.session?.user) {
+        import("@/lib/device-session").then((m) =>
+          m.registerCurrentSession(data.session!.user.id).catch(() => { /* ignore */ })
+        );
+      }
     });
     return () => sub.subscription.unsubscribe();
   }, []);
