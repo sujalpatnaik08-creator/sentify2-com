@@ -1,4 +1,4 @@
-import { useEffect, useMemo, ReactNode } from "react";
+import { useEffect, useMemo, useState, ReactNode } from "react";
 import { usePlayerStore } from "@/stores/playerStore";
 import { getEngine } from "@/lib/playback-engine";
 import {
@@ -8,6 +8,13 @@ import {
   setCrossfadeSec,
   setNormalize,
   setAutoplayContinuity,
+  getSoundQuality,
+  setSoundQuality,
+  getBassBoost,
+  setBassBoost,
+  getBackgroundPlayback,
+  setBackgroundPlayback,
+  type SoundQuality,
 } from "@/lib/user-prefs";
 import type { Track } from "@/types/music";
 
@@ -18,13 +25,11 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     engine.setCrossfade(getCrossfadeSec());
     engine.setNormalize(getNormalize());
     engine.setAutoplayContinuity(getAutoplayContinuity());
-    // Hydrate audio-enhance from engine (engine already restored from localStorage).
     usePlayerStore.getState()._set({ audioEnhance: engine.isAudioEnhanceOn() });
   }, []);
 
   return (
     <>
-      {/* Hidden YouTube player mount point — same id as before. */}
       <div style={{ position: "fixed", left: -9999, top: -9999, width: 0, height: 0, overflow: "hidden" }}>
         <div id="sentify-yt-player" />
       </div>
@@ -33,7 +38,6 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-// ---- Public hook (back-compat surface) ----
 export function usePlayer() {
   const current = usePlayerStore((s) => s.current);
   const queue = usePlayerStore((s) => s.queue);
@@ -49,7 +53,11 @@ export function usePlayer() {
   const autoplayContinuity = usePlayerStore((s) => s.autoplayContinuity);
   const audioEnhance = usePlayerStore((s) => s.audioEnhance);
 
-  // Stable action handles.
+  // Local mirrors for prefs that don't live in the store
+  const [soundQuality, setSQState] = useState<SoundQuality>(() => getSoundQuality());
+  const [bassBoost, setBBState] = useState<boolean>(() => getBassBoost());
+  const [backgroundPlayback, setBGState] = useState<boolean>(() => getBackgroundPlayback());
+
   const actions = useMemo(() => {
     const engine = getEngine();
     return {
@@ -67,12 +75,16 @@ export function usePlayer() {
       setNormalize: (on: boolean) => { setNormalize(on); engine.setNormalize(on); },
       setAutoplayContinuity: (on: boolean) => { setAutoplayContinuity(on); engine.setAutoplayContinuity(on); },
       setAudioEnhance: (on: boolean) => { engine.setAudioEnhance(on); },
+      setSoundQuality: (q: SoundQuality) => { setSoundQuality(q); setSQState(q); },
+      setBassBoost: (on: boolean) => { setBassBoost(on); setBBState(on); },
+      setBackgroundPlayback: (on: boolean) => { setBackgroundPlayback(on); setBGState(on); },
     };
   }, []);
 
   return {
     current, queue, history, isPlaying, progress, duration, volume,
     shuffle, repeat, crossfadeSec, normalize, autoplayContinuity, audioEnhance,
+    soundQuality, bassBoost, backgroundPlayback,
     ...actions,
   };
 }
