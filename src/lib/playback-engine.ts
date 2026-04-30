@@ -13,7 +13,15 @@
 // (cross-origin), so crossfade/normalize fall back to player-volume ramps.
 
 import type { Track } from "@/types/music";
-import { addRecentlyPlayed, getPerfMode, isValidYouTubeId } from "@/lib/user-prefs";
+import {
+  addRecentlyPlayed,
+  getPerfMode,
+  isValidYouTubeId,
+  getSoundQuality,
+  getBassBoost,
+  getBackgroundPlayback,
+  type SoundQuality,
+} from "@/lib/user-prefs";
 import { usePlayerStore } from "@/stores/playerStore";
 import { searchTracks } from "@/lib/music-api";
 
@@ -99,6 +107,18 @@ class PlaybackEngine {
   private widenerSideGain: GainNode | null = null;
   private enhanceOn = true;
 
+  // Sound Quality EQ chain (post-enhancer): low-pass for low/medium quality
+  // simulates lower-bitrate streams; bass-boost via dedicated lowshelf.
+  private qualityFilter: BiquadFilterNode | null = null;
+  private bassBoostNode: BiquadFilterNode | null = null;
+  private quality: SoundQuality = "high";
+  private bassBoostOn = false;
+
+  // Background playback: Wake Lock keeps tab alive when minimized on Chromium.
+  // Media Session API exposes lock-screen / OS-level transport controls.
+  private wakeLock: WakeLockSentinel | null = null;
+  private bgPlayback = true;
+
   // YouTube hidden player
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private yt: any = null;
@@ -139,8 +159,116 @@ class PlaybackEngine {
       if (v != null) this.enhanceOn = v === "1";
     } catch { /* */ }
 
+    // Restore quality / bass-boost / background prefs
+    this.quality = getSoundQuality();
+    this.bassBoostOn = getBassBoost();
+    this.bgPlayback = getBackgroundPlayback();
+
+    // React to runtime pref changes
+    window.addEventListener("sentify:sound-quality", (e: Event) => {
+      this.quality = (e as CustomEvent<SoundQuality>).detail;
+      this.applyQualityChain();
+    });
+    window.addEventListener("sentify:bass-boost", (e: Event) => {
+      this.bassBoostOn = (e as CustomEvent<boolean>).detail;
+      this.applyQualityChain();
+    });
+    window.addEventListener("sentify:bg-playback", (e: Event) => {
+      this.bgPlayback = (e as CustomEvent<boolean>).detail;
+      if (this.bgPlayback && usePlayerStore.getState().isPlaying) this.acquireWakeLock();
+      else this.releaseWakeLock();
+    });
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible" && this.bgPlayback && usePlayerStore.getState().isPlaying) {
+        this.acquireWakeLock();
+      }
+    });
+
     this.startMonitor();
     this.initYouTube();
+    this.bindMediaSession();
+  }
+
+  // -------- Wake Lock (keeps tab alive when minimized on Chromium) --------
+  private async acquireWakeLock() {
+    if (!this.bgPlayback) return;
+    try {
+      const wl = (navigator as Navigator & { wakeLock?: { request: (t: string) => Promise<WakeLockSentinel> } }).wakeLock;
+      if (!wl || this.wakeLock) return;
+      this.wakeLock = await wl.request("screen");
+      this.wakeLock.addEventListener("release", () => { this.wakeLock = null; });
+    } catch { /* not granted; ignore */ }
+  }
+  private releaseWakeLock() {
+    try { this.wakeLock?.release(); } catch { /* */ }
+    this.wakeLock = null;
+  }
+
+  // -------- Media Session: lock-screen + OS transport controls --------
+  private bindMediaSession() {
+    if (!("mediaSession" in navigator)) return;
+    try {
+      navigator.mediaSession.setActionHandler("play", () => this.togglePlay());
+      navigator.mediaSession.setActionHandler("pause", () => this.togglePlay());
+      navigator.mediaSession.setActionHandler("nexttrack", () => this.next());
+      navigator.mediaSession.setActionHandler("previoustrack", () => this.prev());
+      navigator.mediaSession.setActionHandler("seekto", (d: MediaSessionActionDetails) => {
+        if (typeof d.seekTime === "number") this.seek(d.seekTime);
+      });
+      navigator.mediaSession.setActionHandler("seekbackward", (d: MediaSessionActionDetails) => {
+        const a = d.seekOffset || 10;
+        this.seek(Math.max(0, usePlayerStore.getState().progress - a));
+      });
+      navigator.mediaSession.setActionHandler("seekforward", (d: MediaSessionActionDetails) => {
+        const a = d.seekOffset || 10;
+        this.seek(usePlayerStore.getState().progress + a);
+      });
+    } catch { /* unsupported actions ignored */ }
+  }
+
+  private updateMediaSession(track: Track) {
+    if (!("mediaSession" in navigator)) return;
+    try {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: track.title,
+        artist: track.artist,
+        album: track.artist,
+        artwork: track.artwork ? [
+          { src: track.artwork, sizes: "96x96", type: "image/jpeg" },
+          { src: track.artwork, sizes: "256x256", type: "image/jpeg" },
+          { src: track.artwork, sizes: "512x512", type: "image/jpeg" },
+        ] : [],
+      });
+    } catch { /* */ }
+  }
+
+  private updateMediaSessionState(playing: boolean) {
+    if (!("mediaSession" in navigator)) return;
+    try { navigator.mediaSession.playbackState = playing ? "playing" : "paused"; } catch { /* */ }
+  }
+
+  // -------- Quality + Bass Boost subgraph (built lazily in ensureCtx) --------
+  private buildQualityChain() {
+    if (!this.ctx) return;
+    this.qualityFilter = this.ctx.createBiquadFilter();
+    this.qualityFilter.type = "lowpass";
+    this.qualityFilter.frequency.value = 22000; // High = transparent
+    this.qualityFilter.Q.value = 0.707;
+    this.bassBoostNode = this.ctx.createBiquadFilter();
+    this.bassBoostNode.type = "lowshelf";
+    this.bassBoostNode.frequency.value = 80;
+    this.bassBoostNode.gain.value = 0;
+  }
+
+  private applyQualityChain() {
+    if (!this.ctx || !this.qualityFilter || !this.bassBoostNode) return;
+    const t = this.ctx.currentTime;
+    let cutoff = 22000;
+    if (this.quality === "medium") cutoff = 16000;
+    if (this.quality === "low") cutoff = 11000;
+    try { this.qualityFilter.frequency.setTargetAtTime(cutoff, t, 0.05); } catch { /* */ }
+    const boost = this.bassBoostOn ? 7 : 0;
+    try { this.bassBoostNode.gain.setTargetAtTime(boost, t, 0.05); } catch { /* */ }
   }
 
   // ------- WebAudio lazy init (must happen after a user gesture) -------
@@ -205,10 +333,14 @@ class PlaybackEngine {
       // Apply enhancer mix
       this.applyEnhancerMix();
 
-      // Master routing: srcA/B → gainA/B → enhancerIn → enhancerOut → analyser → destination
+      // Build quality + bass-boost subgraph
+      this.buildQualityChain();
+
+      // Master routing: srcA/B → gainA/B → enhancerIn → enhancerOut → bass → quality → analyser → destination
       this.srcA.connect(this.gainA).connect(this.enhancerIn);
       this.srcB.connect(this.gainB).connect(this.enhancerIn);
-      this.enhancerOut.connect(this.analyser).connect(this.ctx.destination);
+      this.enhancerOut.connect(this.bassBoostNode!).connect(this.qualityFilter!).connect(this.analyser).connect(this.ctx.destination);
+      this.applyQualityChain();
     } catch (e) {
       console.warn("WebAudio init failed; falling back to plain audio.", e);
       this.ctx = null;
@@ -232,10 +364,18 @@ class PlaybackEngine {
       }
     });
     audio.addEventListener("play", () => {
-      if (this.activeAudio() === audio) usePlayerStore.getState()._set({ isPlaying: true });
+      if (this.activeAudio() === audio) {
+        usePlayerStore.getState()._set({ isPlaying: true });
+        this.updateMediaSessionState(true);
+        this.acquireWakeLock();
+      }
     });
     audio.addEventListener("pause", () => {
-      if (this.activeAudio() === audio) usePlayerStore.getState()._set({ isPlaying: false });
+      if (this.activeAudio() === audio) {
+        usePlayerStore.getState()._set({ isPlaying: false });
+        this.updateMediaSessionState(false);
+        this.releaseWakeLock();
+      }
     });
     audio.addEventListener("error", () => {
       if (this.activeAudio() === audio) {
@@ -458,6 +598,7 @@ class PlaybackEngine {
     const s = usePlayerStore.getState();
     if (s.current) s._pushHistory(s.current);
     try { addRecentlyPlayed(track); } catch { /* */ }
+    this.updateMediaSession(track);
 
     // Stop both audio elements + YT
     [this.audioA, this.audioB].forEach((a) => {

@@ -14,7 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      user_sessions: {
+        Row: {
+          created_at: string
+          device_label: string
+          id: string
+          ip_city: string | null
+          ip_country: string | null
+          last_active_at: string
+          platform: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_label: string
+          id?: string
+          ip_city?: string | null
+          ip_country?: string | null
+          last_active_at?: string
+          platform?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          device_label?: string
+          id?: string
+          ip_city?: string | null
+          ip_country?: string | null
+          last_active_at?: string
+          platform?: string | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
