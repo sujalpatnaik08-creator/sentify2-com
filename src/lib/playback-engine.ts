@@ -13,7 +13,15 @@
 // (cross-origin), so crossfade/normalize fall back to player-volume ramps.
 
 import type { Track } from "@/types/music";
-import { addRecentlyPlayed, getPerfMode, isValidYouTubeId } from "@/lib/user-prefs";
+import {
+  addRecentlyPlayed,
+  getPerfMode,
+  isValidYouTubeId,
+  getSoundQuality,
+  getBassBoost,
+  getBackgroundPlayback,
+  type SoundQuality,
+} from "@/lib/user-prefs";
 import { usePlayerStore } from "@/stores/playerStore";
 import { searchTracks } from "@/lib/music-api";
 
