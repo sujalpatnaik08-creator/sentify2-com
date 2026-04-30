@@ -43,6 +43,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { SessionsPanel } from "@/components/SessionsPanel";
 
 export const TopBar = () => {
   const navigate = useNavigate();
@@ -377,21 +385,30 @@ export const TopBar = () => {
               <Settings className="w-4 h-4" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="end" className="w-80 p-0">
-            <div className="px-4 py-3 border-b border-border">
+          <PopoverContent align="end" className="w-80 p-0 max-h-[calc(100vh-5rem)] overflow-y-auto">
+            <div className="px-4 py-3 border-b border-border sticky top-0 bg-popover z-10">
               <h4 className="font-semibold text-sm">Settings</h4>
-              <p className="text-xs text-muted-foreground">Playback, performance & account</p>
+              <p className="text-xs text-muted-foreground">Display, sound, devices & account</p>
             </div>
 
-            {/* Theme */}
+            {/* Display */}
             <div className="px-4 py-3 border-b border-border space-y-2">
-              <h5 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Appearance</h5>
+              <h5 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Display</h5>
               <div className="flex items-center justify-between">
                 <Label className="text-sm flex items-center gap-2">
                   {theme === "dark" ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
                   {theme === "dark" ? "Dark mode" : "Light mode"}
                 </Label>
-                <Switch checked={theme === "light"} onCheckedChange={toggleTheme} />
+                <Switch checked={theme === "light"} onCheckedChange={toggleTheme} disabled={autoTheme} />
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-sm flex items-center gap-2">
+                    <CalendarClock className="w-4 h-4" /> Auto theme
+                  </Label>
+                  <p className="text-[10px] text-muted-foreground">Light 6 AM–6 PM, Dark 6 PM–6 AM</p>
+                </div>
+                <Switch checked={autoTheme} onCheckedChange={setAutoTheme} />
               </div>
             </div>
 
@@ -409,6 +426,44 @@ export const TopBar = () => {
                   checked={perf}
                   onCheckedChange={(v) => { setPerf(v); setPerfMode(v); }}
                 />
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-sm flex items-center gap-2">
+                    <Smartphone className="w-4 h-4" /> Background playback
+                  </Label>
+                  <p className="text-[10px] text-muted-foreground">Keep playing when minimized; lock-screen controls</p>
+                </div>
+                <Switch checked={backgroundPlayback} onCheckedChange={setBackgroundPlayback} />
+              </div>
+            </div>
+
+            {/* Sound Quality (was Media Quality) */}
+            <div className="px-4 py-3 border-b border-border space-y-3">
+              <h5 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+                <Volume2 className="w-3.5 h-3.5" /> Sound quality
+              </h5>
+              <div className="flex items-center justify-between gap-2">
+                <Label htmlFor="sq-top" className="text-sm">Streaming quality</Label>
+                <Select value={soundQuality} onValueChange={(v) => setSoundQuality(v as "high" | "medium" | "low")}>
+                  <SelectTrigger id="sq-top" className="h-8 w-32 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="high" className="text-xs">High</SelectItem>
+                    <SelectItem value="medium" className="text-xs">Medium</SelectItem>
+                    <SelectItem value="low" className="text-xs">Low</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="bb-top" className="text-sm flex items-center gap-2">
+                    <Waves className="w-4 h-4" /> Bass boost
+                  </Label>
+                  <p className="text-[10px] text-muted-foreground">+7 dB low-shelf below 80 Hz</p>
+                </div>
+                <Switch id="bb-top" checked={bassBoost} onCheckedChange={setBassBoost} />
               </div>
             </div>
 
