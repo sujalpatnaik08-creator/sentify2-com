@@ -12,6 +12,7 @@ import {
   Loader2,
   Settings,
   X,
+  ArrowRight,
   Sparkles,
   Volume2,
   Waves,
@@ -302,18 +303,22 @@ export const TopBar = () => {
           placeholder="Search songs, artists, albums…"
           className="pl-11 pr-32 h-11 bg-secondary/60 border border-border rounded-full focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary/40 text-sm"
         />
-        {/* Clear button */}
-        {(q || getSearchHistory().length > 0) && (
+        {/* Submit search button */}
+        {q.trim() && (
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            onClick={clearSearch}
-            className="absolute right-20 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full text-muted-foreground hover:text-foreground"
-            aria-label="Clear search and history"
-            title="Clear search and history"
+            onClick={() => {
+              addSearchHistory(q);
+              setShowSuggest(false);
+              navigate(`/search?q=${encodeURIComponent(q.trim())}`);
+            }}
+            className="absolute right-20 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full text-primary hover:text-primary hover:bg-primary/10"
+            aria-label="Search"
+            title="Search"
           >
-            <X className="w-4 h-4" />
+            <ArrowRight className="w-4 h-4" />
           </Button>
         )}
         {/* Identify */}
