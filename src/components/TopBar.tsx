@@ -527,6 +527,9 @@ export const TopBar = () => {
                       <LogOut className="w-4 h-4 mr-2" /> Sign out
                     </Button>
                   </div>
+                  <div className="pt-3 mt-2 border-t border-border/60">
+                    <SessionsPanel />
+                  </div>
                 </>
               ) : (
                 <Button
