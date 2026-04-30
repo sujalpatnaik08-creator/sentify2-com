@@ -7,13 +7,16 @@ import {
   Moon,
   Search as SearchIcon,
   Sun,
-  User,
   Zap,
   History,
   Loader2,
   Settings,
   X,
   Sparkles,
+  Volume2,
+  Waves,
+  Smartphone,
+  CalendarClock,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
@@ -46,16 +49,22 @@ export const TopBar = () => {
   const loc = useLocation();
   const [q, setQ] = useState("");
   const { user, signOut } = useAuth();
-  const { theme, toggleTheme } = useTheme();
+  const { theme, toggleTheme, autoTheme, setAutoTheme } = useTheme();
   const {
     crossfadeSec,
     normalize,
     autoplayContinuity,
     audioEnhance,
+    soundQuality,
+    bassBoost,
+    backgroundPlayback,
     setCrossfade,
     setNormalize,
     setAutoplayContinuity,
     setAudioEnhance,
+    setSoundQuality,
+    setBassBoost,
+    setBackgroundPlayback,
   } = usePlayer();
   const [perf, setPerf] = useState(getPerfMode());
   const [listening, setListening] = useState(false);
