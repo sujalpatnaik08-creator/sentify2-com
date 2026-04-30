@@ -107,6 +107,18 @@ class PlaybackEngine {
   private widenerSideGain: GainNode | null = null;
   private enhanceOn = true;
 
+  // Sound Quality EQ chain (post-enhancer): low-pass for low/medium quality
+  // simulates lower-bitrate streams; bass-boost via dedicated lowshelf.
+  private qualityFilter: BiquadFilterNode | null = null;
+  private bassBoostNode: BiquadFilterNode | null = null;
+  private quality: SoundQuality = "high";
+  private bassBoostOn = false;
+
+  // Background playback: Wake Lock keeps tab alive when minimized on Chromium.
+  // Media Session API exposes lock-screen / OS-level transport controls.
+  private wakeLock: WakeLockSentinel | null = null;
+  private bgPlayback = true;
+
   // YouTube hidden player
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private yt: any = null;
