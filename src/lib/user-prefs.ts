@@ -13,7 +13,53 @@ const K = {
   crossfade: "sentify_crossfade_sec",  // number 0..12
   normalize: "sentify_normalize",      // "1" | "0"
   autoplay: "sentify_autoplay_cont",   // "1" | "0"
+  autoTheme: "sentify_auto_theme",     // "1" | "0"  — auto switch by 6AM/6PM
+  soundQuality: "sentify_sound_q",     // "high" | "medium" | "low"
+  bassBoost: "sentify_bass_boost",     // "1" | "0"
+  bgPlayback: "sentify_bg_playback",   // "1" | "0"  — Media Session + Wake Lock
 };
+
+// ---------- Auto theme schedule (6 AM .. 6 PM = light, else dark) ----------
+export function getAutoTheme(): boolean {
+  try { return localStorage.getItem(K.autoTheme) === "1"; } catch { return false; }
+}
+export function setAutoTheme(on: boolean) {
+  try { localStorage.setItem(K.autoTheme, on ? "1" : "0"); } catch { /* */ }
+  window.dispatchEvent(new CustomEvent("sentify:auto-theme", { detail: on }));
+}
+export function themeForHour(h: number): "light" | "dark" {
+  return h >= 6 && h < 18 ? "light" : "dark";
+}
+
+// ---------- Sound Quality (renamed from "media quality") ----------
+export type SoundQuality = "high" | "medium" | "low";
+export function getSoundQuality(): SoundQuality {
+  try {
+    const v = localStorage.getItem(K.soundQuality);
+    if (v === "high" || v === "medium" || v === "low") return v;
+  } catch { /* */ }
+  return "high";
+}
+export function setSoundQuality(q: SoundQuality) {
+  try { localStorage.setItem(K.soundQuality, q); } catch { /* */ }
+  window.dispatchEvent(new CustomEvent("sentify:sound-quality", { detail: q }));
+}
+export function getBassBoost(): boolean {
+  try { return localStorage.getItem(K.bassBoost) === "1"; } catch { return false; }
+}
+export function setBassBoost(on: boolean) {
+  try { localStorage.setItem(K.bassBoost, on ? "1" : "0"); } catch { /* */ }
+  window.dispatchEvent(new CustomEvent("sentify:bass-boost", { detail: on }));
+}
+
+// ---------- Background Playback toggle ----------
+export function getBackgroundPlayback(): boolean {
+  try { return localStorage.getItem(K.bgPlayback) !== "0"; } catch { return true; }
+}
+export function setBackgroundPlayback(on: boolean) {
+  try { localStorage.setItem(K.bgPlayback, on ? "1" : "0"); } catch { /* */ }
+  window.dispatchEvent(new CustomEvent("sentify:bg-playback", { detail: on }));
+}
 
 // ---------- Spotify-style playback prefs ----------
 export function getCrossfadeSec(): number {
