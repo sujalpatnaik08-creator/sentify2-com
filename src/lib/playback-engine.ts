@@ -598,6 +598,7 @@ class PlaybackEngine {
     const s = usePlayerStore.getState();
     if (s.current) s._pushHistory(s.current);
     try { addRecentlyPlayed(track); } catch { /* */ }
+    this.updateMediaSession(track);
 
     // Stop both audio elements + YT
     [this.audioA, this.audioB].forEach((a) => {
