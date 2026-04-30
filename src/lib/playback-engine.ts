@@ -333,10 +333,14 @@ class PlaybackEngine {
       // Apply enhancer mix
       this.applyEnhancerMix();
 
-      // Master routing: srcA/B → gainA/B → enhancerIn → enhancerOut → analyser → destination
+      // Build quality + bass-boost subgraph
+      this.buildQualityChain();
+
+      // Master routing: srcA/B → gainA/B → enhancerIn → enhancerOut → bass → quality → analyser → destination
       this.srcA.connect(this.gainA).connect(this.enhancerIn);
       this.srcB.connect(this.gainB).connect(this.enhancerIn);
-      this.enhancerOut.connect(this.analyser).connect(this.ctx.destination);
+      this.enhancerOut.connect(this.bassBoostNode!).connect(this.qualityFilter!).connect(this.analyser).connect(this.ctx.destination);
+      this.applyQualityChain();
     } catch (e) {
       console.warn("WebAudio init failed; falling back to plain audio.", e);
       this.ctx = null;
