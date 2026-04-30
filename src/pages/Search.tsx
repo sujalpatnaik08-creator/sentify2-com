@@ -883,6 +883,24 @@ const Search = () => {
 // Small fragment helper so we can return two <tr>s from a .map() in <tbody>
 const FragmentRow = ({ children }: { children: React.ReactNode }) => <>{children}</>;
 
+const TRANSLATE_LANGS_INLINE: { code: string; label: string }[] = [
+  { code: "off", label: "Original" },
+  { code: "English", label: "English" },
+  { code: "Hindi", label: "Hindi" },
+  { code: "Hinglish", label: "Hinglish" },
+  { code: "Spanish", label: "Spanish" },
+  { code: "French", label: "French" },
+  { code: "German", label: "German" },
+  { code: "Japanese", label: "Japanese" },
+  { code: "Korean", label: "Korean" },
+  { code: "Arabic", label: "Arabic" },
+  { code: "Bengali", label: "Bengali" },
+  { code: "Tamil", label: "Tamil" },
+  { code: "Telugu", label: "Telugu" },
+  { code: "Marathi", label: "Marathi" },
+  { code: "Punjabi", label: "Punjabi" },
+];
+
 const LyricsRow = ({
   state,
   text,
@@ -893,44 +911,89 @@ const LyricsRow = ({
   text?: string;
   onRetry: () => void;
   onClose: () => void;
-}) => (
-  <div className="space-y-3">
-    <div className="flex items-center justify-between">
-      <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary">
-        <FileText className="w-3.5 h-3.5" /> Lyrics
-      </span>
-      <button onClick={onClose} className="text-xs text-muted-foreground hover:text-foreground">
-        Hide
-      </button>
+}) => {
+  const [lang, setLang] = useState<string>("off");
+  const [translated, setTranslated] = useState<string | null>(null);
+  const [translating, setTranslating] = useState(false);
+
+  const onLang = async (next: string) => {
+    setLang(next);
+    if (next === "off" || !text) { setTranslated(null); return; }
+    setTranslating(true);
+    try {
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { data, error } = await supabase.functions.invoke("translate-lyrics", {
+        body: { text, targetLanguage: next, romanize: false },
+      });
+      if (error) throw error;
+      setTranslated((data as { translated?: string })?.translated ?? "");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Translation failed");
+      setTranslated(null);
+    } finally {
+      setTranslating(false);
+    }
+  };
+
+  const display = lang !== "off" && translated ? translated : text;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary">
+          <FileText className="w-3.5 h-3.5" /> Lyrics
+        </span>
+        {state === "done" && text && (
+          <div className="flex items-center gap-2">
+            <select
+              value={lang}
+              onChange={(e) => onLang(e.target.value)}
+              disabled={translating}
+              className="h-7 text-xs bg-secondary border border-border rounded px-2 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary"
+              aria-label="Translate lyrics"
+            >
+              {TRANSLATE_LANGS_INLINE.map((l) => (
+                <option key={l.code} value={l.code}>
+                  {l.code === "off" ? "Translate to…" : l.label}
+                </option>
+              ))}
+            </select>
+            {translating && <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />}
+          </div>
+        )}
+        <button onClick={onClose} className="text-xs text-muted-foreground hover:text-foreground">
+          Hide
+        </button>
+      </div>
+      {state === "loading" && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="w-4 h-4 animate-spin" /> Fetching lyrics…
+        </div>
+      )}
+      {state === "done" && display && (
+        <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-foreground/90 max-h-80 overflow-y-auto">
+          {display}
+        </pre>
+      )}
+      {state === "none" && (
+        <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
+          <span>No lyrics found for this track.</span>
+          <Button size="sm" variant="ghost" onClick={onRetry} className="h-7">
+            <RefreshCw className="w-3.5 h-3.5 mr-1" /> Retry
+          </Button>
+        </div>
+      )}
+      {state === "error" && (
+        <div className="flex items-center justify-between gap-3 text-sm text-destructive">
+          <span>Couldn't load lyrics.</span>
+          <Button size="sm" variant="ghost" onClick={onRetry} className="h-7">
+            <RefreshCw className="w-3.5 h-3.5 mr-1" /> Retry
+          </Button>
+        </div>
+      )}
     </div>
-    {state === "loading" && (
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Loader2 className="w-4 h-4 animate-spin" /> Fetching lyrics…
-      </div>
-    )}
-    {state === "done" && text && (
-      <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-foreground/90 max-h-80 overflow-y-auto">
-        {text}
-      </pre>
-    )}
-    {state === "none" && (
-      <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
-        <span>No lyrics found for this track.</span>
-        <Button size="sm" variant="ghost" onClick={onRetry} className="h-7">
-          <RefreshCw className="w-3.5 h-3.5 mr-1" /> Retry
-        </Button>
-      </div>
-    )}
-    {state === "error" && (
-      <div className="flex items-center justify-between gap-3 text-sm text-destructive">
-        <span>Couldn't load lyrics.</span>
-        <Button size="sm" variant="ghost" onClick={onRetry} className="h-7">
-          <RefreshCw className="w-3.5 h-3.5 mr-1" /> Retry
-        </Button>
-      </div>
-    )}
-  </div>
-);
+  );
+};
 
 const DebugStat = ({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) => (
   <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-secondary/60 border border-border/50">
