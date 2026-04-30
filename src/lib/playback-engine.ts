@@ -364,10 +364,18 @@ class PlaybackEngine {
       }
     });
     audio.addEventListener("play", () => {
-      if (this.activeAudio() === audio) usePlayerStore.getState()._set({ isPlaying: true });
+      if (this.activeAudio() === audio) {
+        usePlayerStore.getState()._set({ isPlaying: true });
+        this.updateMediaSessionState(true);
+        this.acquireWakeLock();
+      }
     });
     audio.addEventListener("pause", () => {
-      if (this.activeAudio() === audio) usePlayerStore.getState()._set({ isPlaying: false });
+      if (this.activeAudio() === audio) {
+        usePlayerStore.getState()._set({ isPlaying: false });
+        this.updateMediaSessionState(false);
+        this.releaseWakeLock();
+      }
     });
     audio.addEventListener("error", () => {
       if (this.activeAudio() === audio) {
