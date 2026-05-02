@@ -4,11 +4,13 @@ import { PlayerBar } from "./PlayerBar";
 import { LyricsPanel } from "./LyricsPanel";
 import { QueuePanel } from "./QueuePanel";
 import { TopBar } from "./TopBar";
+import { NowPlayingView } from "./NowPlayingView";
 import { useAuth } from "@/contexts/AuthContext";
 
 export const AppLayout = ({ children }: { children: ReactNode }) => {
   const [showLyrics, setShowLyrics] = useState(false);
   const [showQueue, setShowQueue] = useState(false);
+  const [showNowPlaying, setShowNowPlaying] = useState(false);
   const { user } = useAuth();
   const signedIn = !!user;
 
@@ -37,9 +39,13 @@ export const AppLayout = ({ children }: { children: ReactNode }) => {
             setShowQueue((v) => !v);
             setShowLyrics(false);
           }}
+          onOpenNowPlaying={() => setShowNowPlaying(true)}
           showLyrics={showLyrics}
           showQueue={showQueue}
         />
+      )}
+      {signedIn && (
+        <NowPlayingView open={showNowPlaying} onOpenChange={setShowNowPlaying} />
       )}
     </div>
   );
