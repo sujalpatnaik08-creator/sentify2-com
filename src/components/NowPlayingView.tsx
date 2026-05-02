@@ -393,7 +393,7 @@ export const NowPlayingView = ({ open, onOpenChange }: Props) => {
             </div>
             <LyricsBlock
               status={lyricsStatus}
-              translating={translating}
+              translatingLang={translatingLang}
               displaySynced={displaySynced}
               displayPlain={displayPlain}
               activeIdx={activeIdx}
@@ -497,7 +497,7 @@ export const NowPlayingView = ({ open, onOpenChange }: Props) => {
                     </div>
                     <LyricsBlock
                       status={lyricsStatus}
-                      translating={translating}
+                      translatingLang={translatingLang}
                       displaySynced={displaySynced}
                       displayPlain={displayPlain}
                       activeIdx={activeIdx}
