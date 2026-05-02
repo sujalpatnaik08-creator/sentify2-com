@@ -96,16 +96,30 @@ export const NowPlayingView = ({ open, onOpenChange }: Props) => {
   const [lyricsExpanded, setLyricsExpanded] = useState(false);
   const [liked, setLiked] = useState(false);
 
-  // Lyrics state
+  // Lyrics state — `synced` and `plain` are the SOURCE (untranslated) copies.
+  // Translations are stored separately in `translatedSynced` / `translatedPlain`,
+  // but timing/click-to-seek ALWAYS uses the source `synced` array so the
+  // highlighted line and seek targets never drift due to translation.
   const [plain, setPlain] = useState<string | null>(null);
   const [synced, setSynced] = useState<LyricLine[] | null>(null);
   const [lyricsStatus, setLyricsStatus] =
     useState<"idle" | "loading" | "ready" | "none" | "error">("idle");
   const [targetLang, setTargetLang] = useState<string>("off");
-  const [translating, setTranslating] = useState(false);
+  // The language that is currently being fetched (for per-language spinner).
+  const [translatingLang, setTranslatingLang] = useState<string | null>(null);
   const [translatedSynced, setTranslatedSynced] = useState<LyricLine[] | null>(null);
   const [translatedPlain, setTranslatedPlain] = useState<string | null>(null);
   const activeLineRef = useRef<HTMLDivElement | null>(null);
+
+  // Per-track translation cache. Cleared when track changes.
+  // Key: target language. Value: { synced?: LyricLine[]; plain?: string }.
+  const translationCacheRef = useRef<
+    Map<string, { synced: LyricLine[] | null; plain: string | null }>
+  >(new Map());
+  // Monotonic request id so out-of-order responses can't overwrite newer ones.
+  const translateReqIdRef = useRef(0);
+  // Debounce timer for language switching.
+  const langDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Artist info
   const [artistInfo, setArtistInfo] = useState<ArtistInfo | null>(null);
@@ -124,6 +138,13 @@ export const NowPlayingView = ({ open, onOpenChange }: Props) => {
     setTranslatedPlain(null);
     setTranslatedSynced(null);
     setTargetLang("off");
+    setTranslatingLang(null);
+    translationCacheRef.current = new Map();
+    translateReqIdRef.current++;
+    if (langDebounceRef.current) {
+      clearTimeout(langDebounceRef.current);
+      langDebounceRef.current = null;
+    }
     fetchLyrics(current.artist, current.title, duration || current.duration)
       .then((res) => {
         if (cancelled) return;
@@ -156,35 +177,55 @@ export const NowPlayingView = ({ open, onOpenChange }: Props) => {
     return () => { cancelled = true; };
   }, [current?.artist, open]);
 
-  // Active line index for synced lyrics
-  const displaySynced = (translatedSynced && targetLang !== "off") ? translatedSynced : synced;
-  const displayPlain = (translatedPlain && targetLang !== "off") ? translatedPlain : plain;
+  // Display lines = translated when available + selected, else source.
+  // CRITICAL: timing always references `synced` (the source) — translated
+  // lines reuse the source `time` field so highlight + click-to-seek stay
+  // perfectly aligned regardless of translation state.
+  const showTranslated = targetLang !== "off" && !!translatedSynced;
+  const displaySynced = showTranslated ? translatedSynced : synced;
+  const displayPlain =
+    targetLang !== "off" && translatedPlain ? translatedPlain : plain;
+
+  // Active line index — ALWAYS computed against the source `synced` array
+  // so it never jumps around when a translation arrives or is cleared.
   const activeIdx = useMemo(() => {
-    if (!displaySynced || displaySynced.length === 0) return -1;
+    if (!synced || synced.length === 0) return -1;
     let idx = -1;
-    for (let i = 0; i < displaySynced.length; i++) {
-      if (displaySynced[i].time <= progress + 0.05) idx = i;
+    for (let i = 0; i < synced.length; i++) {
+      if (synced[i].time <= progress + 0.05) idx = i;
       else break;
     }
     return idx;
-  }, [displaySynced, progress]);
+  }, [synced, progress]);
 
-  // Auto-scroll active line into view
+  // Auto-scroll active line into view (synced + smooth, but only if visible)
   useEffect(() => {
     if (activeIdx >= 0 && activeLineRef.current) {
       activeLineRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   }, [activeIdx]);
 
-  // Translation
+  // Run a translation for the given language, with caching + race-protection.
   const runTranslate = async (lang: string) => {
     if (lang === "off") {
       setTranslatedPlain(null);
       setTranslatedSynced(null);
+      setTranslatingLang(null);
       return;
     }
     if (!plain && !synced) return;
-    setTranslating(true);
+
+    // Cache hit — apply instantly, no network round-trip.
+    const cached = translationCacheRef.current.get(lang);
+    if (cached) {
+      setTranslatedSynced(cached.synced);
+      setTranslatedPlain(cached.plain);
+      setTranslatingLang(null);
+      return;
+    }
+
+    const reqId = ++translateReqIdRef.current;
+    setTranslatingLang(lang);
     try {
       if (synced && synced.length > 0) {
         const joined = synced.map((l) => l.text || "♪").join("\n");
@@ -192,19 +233,31 @@ export const NowPlayingView = ({ open, onOpenChange }: Props) => {
           body: { text: joined, targetLanguage: lang, romanize: false },
         });
         if (error) throw error;
+        // Drop stale responses (track or language changed mid-flight).
+        if (reqId !== translateReqIdRef.current) return;
         const translated = (data as { translated?: string })?.translated ?? "";
         const lines = translated.split(/\r?\n/);
-        const out: LyricLine[] = synced.map((l, i) => ({ time: l.time, text: lines[i] ?? "" }));
+        // Reuse SOURCE time for every translated line so timing is identical.
+        const out: LyricLine[] = synced.map((l, i) => ({
+          time: l.time,
+          text: lines[i] ?? "",
+        }));
+        const cachedEntry = { synced: out, plain: out.map((l) => l.text).join("\n") };
+        translationCacheRef.current.set(lang, cachedEntry);
         setTranslatedSynced(out);
-        setTranslatedPlain(out.map((l) => l.text).join("\n"));
+        setTranslatedPlain(cachedEntry.plain);
       } else if (plain) {
         const { data, error } = await supabase.functions.invoke("translate-lyrics", {
           body: { text: plain, targetLanguage: lang, romanize: false },
         });
         if (error) throw error;
-        setTranslatedPlain((data as { translated?: string })?.translated ?? "");
+        if (reqId !== translateReqIdRef.current) return;
+        const translated = (data as { translated?: string })?.translated ?? "";
+        translationCacheRef.current.set(lang, { synced: null, plain: translated });
+        setTranslatedPlain(translated);
       }
     } catch (e: unknown) {
+      if (reqId !== translateReqIdRef.current) return;
       const msg =
         typeof e === "object" && e && "message" in e
           ? String((e as { message: unknown }).message)
@@ -213,15 +266,41 @@ export const NowPlayingView = ({ open, onOpenChange }: Props) => {
       setTranslatedPlain(null);
       setTranslatedSynced(null);
     } finally {
-      setTranslating(false);
+      // Only clear loader if this is still the latest request.
+      if (reqId === translateReqIdRef.current) setTranslatingLang(null);
     }
   };
 
   const onLangChange = (next: string) => {
     setTargetLang(next);
-    void runTranslate(next);
+    if (next === "off") {
+      // Clear immediately on "Original" — no debounce needed.
+      void runTranslate("off");
+      return;
+    }
+    // Cache hit applies synchronously — debounce only the network case.
+    const cached = translationCacheRef.current.get(next);
+    if (cached) {
+      setTranslatedSynced(cached.synced);
+      setTranslatedPlain(cached.plain);
+      setTranslatingLang(null);
+      return;
+    }
+    if (langDebounceRef.current) clearTimeout(langDebounceRef.current);
+    langDebounceRef.current = setTimeout(() => {
+      void runTranslate(next);
+    }, 300);
   };
 
+  // Cleanup pending debounce on unmount
+  useEffect(() => {
+    return () => {
+      if (langDebounceRef.current) clearTimeout(langDebounceRef.current);
+    };
+  }, []);
+
+  // Click-to-seek — `time` comes from the displayed line, but since we copy
+  // the source time onto every translated line above, this is always correct.
   const onLineClick = (time: number) => {
     if (isFinite(time) && time >= 0) seek(time);
   };
