@@ -46,6 +46,7 @@ import {
 import { usePlayer } from "@/contexts/PlayerContext";
 import { fetchLyrics, type LyricLine } from "@/lib/music-api";
 import { getArtistInfo, type ArtistInfo } from "@/lib/artist-info";
+import { parseSongDNA } from "@/lib/song-dna";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -96,16 +97,30 @@ export const NowPlayingView = ({ open, onOpenChange }: Props) => {
   const [lyricsExpanded, setLyricsExpanded] = useState(false);
   const [liked, setLiked] = useState(false);
 
-  // Lyrics state
+  // Lyrics state — `synced` and `plain` are the SOURCE (untranslated) copies.
+  // Translations are stored separately in `translatedSynced` / `translatedPlain`,
+  // but timing/click-to-seek ALWAYS uses the source `synced` array so the
+  // highlighted line and seek targets never drift due to translation.
   const [plain, setPlain] = useState<string | null>(null);
   const [synced, setSynced] = useState<LyricLine[] | null>(null);
   const [lyricsStatus, setLyricsStatus] =
     useState<"idle" | "loading" | "ready" | "none" | "error">("idle");
   const [targetLang, setTargetLang] = useState<string>("off");
-  const [translating, setTranslating] = useState(false);
+  // The language that is currently being fetched (for per-language spinner).
+  const [translatingLang, setTranslatingLang] = useState<string | null>(null);
   const [translatedSynced, setTranslatedSynced] = useState<LyricLine[] | null>(null);
   const [translatedPlain, setTranslatedPlain] = useState<string | null>(null);
   const activeLineRef = useRef<HTMLDivElement | null>(null);
+
+  // Per-track translation cache. Cleared when track changes.
+  // Key: target language. Value: { synced?: LyricLine[]; plain?: string }.
+  const translationCacheRef = useRef<
+    Map<string, { synced: LyricLine[] | null; plain: string | null }>
+  >(new Map());
+  // Monotonic request id so out-of-order responses can't overwrite newer ones.
+  const translateReqIdRef = useRef(0);
+  // Debounce timer for language switching.
+  const langDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Artist info
   const [artistInfo, setArtistInfo] = useState<ArtistInfo | null>(null);
@@ -124,6 +139,13 @@ export const NowPlayingView = ({ open, onOpenChange }: Props) => {
     setTranslatedPlain(null);
     setTranslatedSynced(null);
     setTargetLang("off");
+    setTranslatingLang(null);
+    translationCacheRef.current = new Map();
+    translateReqIdRef.current++;
+    if (langDebounceRef.current) {
+      clearTimeout(langDebounceRef.current);
+      langDebounceRef.current = null;
+    }
     fetchLyrics(current.artist, current.title, duration || current.duration)
       .then((res) => {
         if (cancelled) return;
@@ -156,35 +178,55 @@ export const NowPlayingView = ({ open, onOpenChange }: Props) => {
     return () => { cancelled = true; };
   }, [current?.artist, open]);
 
-  // Active line index for synced lyrics
-  const displaySynced = (translatedSynced && targetLang !== "off") ? translatedSynced : synced;
-  const displayPlain = (translatedPlain && targetLang !== "off") ? translatedPlain : plain;
+  // Display lines = translated when available + selected, else source.
+  // CRITICAL: timing always references `synced` (the source) — translated
+  // lines reuse the source `time` field so highlight + click-to-seek stay
+  // perfectly aligned regardless of translation state.
+  const showTranslated = targetLang !== "off" && !!translatedSynced;
+  const displaySynced = showTranslated ? translatedSynced : synced;
+  const displayPlain =
+    targetLang !== "off" && translatedPlain ? translatedPlain : plain;
+
+  // Active line index — ALWAYS computed against the source `synced` array
+  // so it never jumps around when a translation arrives or is cleared.
   const activeIdx = useMemo(() => {
-    if (!displaySynced || displaySynced.length === 0) return -1;
+    if (!synced || synced.length === 0) return -1;
     let idx = -1;
-    for (let i = 0; i < displaySynced.length; i++) {
-      if (displaySynced[i].time <= progress + 0.05) idx = i;
+    for (let i = 0; i < synced.length; i++) {
+      if (synced[i].time <= progress + 0.05) idx = i;
       else break;
     }
     return idx;
-  }, [displaySynced, progress]);
+  }, [synced, progress]);
 
-  // Auto-scroll active line into view
+  // Auto-scroll active line into view (synced + smooth, but only if visible)
   useEffect(() => {
     if (activeIdx >= 0 && activeLineRef.current) {
       activeLineRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   }, [activeIdx]);
 
-  // Translation
+  // Run a translation for the given language, with caching + race-protection.
   const runTranslate = async (lang: string) => {
     if (lang === "off") {
       setTranslatedPlain(null);
       setTranslatedSynced(null);
+      setTranslatingLang(null);
       return;
     }
     if (!plain && !synced) return;
-    setTranslating(true);
+
+    // Cache hit — apply instantly, no network round-trip.
+    const cached = translationCacheRef.current.get(lang);
+    if (cached) {
+      setTranslatedSynced(cached.synced);
+      setTranslatedPlain(cached.plain);
+      setTranslatingLang(null);
+      return;
+    }
+
+    const reqId = ++translateReqIdRef.current;
+    setTranslatingLang(lang);
     try {
       if (synced && synced.length > 0) {
         const joined = synced.map((l) => l.text || "♪").join("\n");
@@ -192,19 +234,31 @@ export const NowPlayingView = ({ open, onOpenChange }: Props) => {
           body: { text: joined, targetLanguage: lang, romanize: false },
         });
         if (error) throw error;
+        // Drop stale responses (track or language changed mid-flight).
+        if (reqId !== translateReqIdRef.current) return;
         const translated = (data as { translated?: string })?.translated ?? "";
         const lines = translated.split(/\r?\n/);
-        const out: LyricLine[] = synced.map((l, i) => ({ time: l.time, text: lines[i] ?? "" }));
+        // Reuse SOURCE time for every translated line so timing is identical.
+        const out: LyricLine[] = synced.map((l, i) => ({
+          time: l.time,
+          text: lines[i] ?? "",
+        }));
+        const cachedEntry = { synced: out, plain: out.map((l) => l.text).join("\n") };
+        translationCacheRef.current.set(lang, cachedEntry);
         setTranslatedSynced(out);
-        setTranslatedPlain(out.map((l) => l.text).join("\n"));
+        setTranslatedPlain(cachedEntry.plain);
       } else if (plain) {
         const { data, error } = await supabase.functions.invoke("translate-lyrics", {
           body: { text: plain, targetLanguage: lang, romanize: false },
         });
         if (error) throw error;
-        setTranslatedPlain((data as { translated?: string })?.translated ?? "");
+        if (reqId !== translateReqIdRef.current) return;
+        const translated = (data as { translated?: string })?.translated ?? "";
+        translationCacheRef.current.set(lang, { synced: null, plain: translated });
+        setTranslatedPlain(translated);
       }
     } catch (e: unknown) {
+      if (reqId !== translateReqIdRef.current) return;
       const msg =
         typeof e === "object" && e && "message" in e
           ? String((e as { message: unknown }).message)
@@ -213,15 +267,41 @@ export const NowPlayingView = ({ open, onOpenChange }: Props) => {
       setTranslatedPlain(null);
       setTranslatedSynced(null);
     } finally {
-      setTranslating(false);
+      // Only clear loader if this is still the latest request.
+      if (reqId === translateReqIdRef.current) setTranslatingLang(null);
     }
   };
 
   const onLangChange = (next: string) => {
     setTargetLang(next);
-    void runTranslate(next);
+    if (next === "off") {
+      // Clear immediately on "Original" — no debounce needed.
+      void runTranslate("off");
+      return;
+    }
+    // Cache hit applies synchronously — debounce only the network case.
+    const cached = translationCacheRef.current.get(next);
+    if (cached) {
+      setTranslatedSynced(cached.synced);
+      setTranslatedPlain(cached.plain);
+      setTranslatingLang(null);
+      return;
+    }
+    if (langDebounceRef.current) clearTimeout(langDebounceRef.current);
+    langDebounceRef.current = setTimeout(() => {
+      void runTranslate(next);
+    }, 300);
   };
 
+  // Cleanup pending debounce on unmount
+  useEffect(() => {
+    return () => {
+      if (langDebounceRef.current) clearTimeout(langDebounceRef.current);
+    };
+  }, []);
+
+  // Click-to-seek — `time` comes from the displayed line, but since we copy
+  // the source time onto every translated line above, this is always correct.
   const onLineClick = (time: number) => {
     if (isFinite(time) && time >= 0) seek(time);
   };
@@ -314,7 +394,7 @@ export const NowPlayingView = ({ open, onOpenChange }: Props) => {
             </div>
             <LyricsBlock
               status={lyricsStatus}
-              translating={translating}
+              translatingLang={translatingLang}
               displaySynced={displaySynced}
               displayPlain={displayPlain}
               activeIdx={activeIdx}
@@ -418,7 +498,7 @@ export const NowPlayingView = ({ open, onOpenChange }: Props) => {
                     </div>
                     <LyricsBlock
                       status={lyricsStatus}
-                      translating={translating}
+                      translatingLang={translatingLang}
                       displaySynced={displaySynced}
                       displayPlain={displayPlain}
                       activeIdx={activeIdx}
@@ -475,7 +555,9 @@ const TabBtn = ({
 
 interface LyricsBlockProps {
   status: "idle" | "loading" | "ready" | "none" | "error";
-  translating: boolean;
+  // The language currently being fetched (null when idle). Used for per-language
+  // loading states next to the dropdown so the lyrics body never flashes.
+  translatingLang: string | null;
   displaySynced: LyricLine[] | null;
   displayPlain: string | null;
   activeIdx: number;
@@ -488,7 +570,7 @@ interface LyricsBlockProps {
 
 const LyricsBlock = ({
   status,
-  translating,
+  translatingLang,
   displaySynced,
   displayPlain,
   activeIdx,
@@ -498,6 +580,12 @@ const LyricsBlock = ({
   onLangChange,
   big,
 }: LyricsBlockProps) => {
+  // Subtle dim when a translation is in flight so the lyrics body never flashes
+  // empty / re-mounts. Source lines stay in place; translation swaps in once
+  // ready. Combined with stable line keys (time-based) below, this prevents
+  // the previous "glitchy" re-render seen on language change.
+  const isTranslatingNew = !!translatingLang && translatingLang !== "off";
+  const translatingLabel = TRANSLATE_LANGS.find((l) => l.code === translatingLang)?.label;
   return (
     <>
       <div className="flex items-center gap-2 mb-3 px-1">
@@ -507,11 +595,17 @@ const LyricsBlock = ({
             <SelectValue placeholder="Translate to…" />
           </SelectTrigger>
           <SelectContent className="max-h-72">
-            {TRANSLATE_LANGS.map((l) => (
-              <SelectItem key={l.code} value={l.code} className="text-xs">
-                {l.label}
-              </SelectItem>
-            ))}
+            {TRANSLATE_LANGS.map((l) => {
+              const loading = translatingLang === l.code;
+              return (
+                <SelectItem key={l.code} value={l.code} className="text-xs">
+                  <span className="inline-flex items-center gap-1.5">
+                    {loading && <Loader2 className="w-3 h-3 animate-spin" />}
+                    {l.label}
+                  </span>
+                </SelectItem>
+              );
+            })}
           </SelectContent>
         </Select>
         {targetLang !== "off" && (
@@ -525,11 +619,21 @@ const LyricsBlock = ({
             <RotateCcw className="w-4 h-4" />
           </Button>
         )}
-        {translating && <Loader2 className="w-4 h-4 animate-spin text-primary" />}
+        {isTranslatingNew && (
+          <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+            <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+            <span className="hidden sm:inline">Translating to {translatingLabel}…</span>
+          </span>
+        )}
       </div>
 
       <ScrollArea className={cn(big ? "h-[calc(100dvh-220px)]" : "max-h-[40vh]")}>
-        <div className="px-2 pb-8">
+        <div
+          className={cn(
+            "px-2 pb-8 transition-opacity duration-200",
+            isTranslatingNew && "opacity-70",
+          )}
+        >
           {status === "loading" ? (
             <div className="flex flex-col items-center mt-6 gap-2">
               <Loader2 className="w-5 h-5 animate-spin text-primary" />
@@ -543,16 +647,20 @@ const LyricsBlock = ({
             <div className={cn("space-y-2", big && "space-y-4")}>
               {displaySynced.map((line, i) => {
                 const isActive = i === activeIdx;
+                // Stable, time-based key so React reuses the same DOM nodes
+                // when the text changes (translation swap) — preventing the
+                // re-mount flicker and keeping the active highlight steady.
                 return (
                   <div
-                    key={i}
+                    key={`${line.time.toFixed(3)}-${i}`}
                     ref={isActive ? activeLineRef : null}
                     onClick={() => onLineClick(line.time)}
                     className={cn(
-                      "cursor-pointer rounded transition-all leading-relaxed whitespace-pre-line px-1",
+                      "cursor-pointer rounded leading-relaxed whitespace-pre-line px-1",
+                      "transition-colors duration-200",
                       big ? "text-lg sm:text-xl" : "text-sm",
                       isActive
-                        ? "text-primary font-semibold scale-[1.02]"
+                        ? "text-primary font-semibold"
                         : i < activeIdx
                           ? "text-muted-foreground/60 hover:text-foreground"
                           : "text-foreground/75 hover:text-foreground",
@@ -640,49 +748,129 @@ const ArtistCard = ({
   );
 };
 
-const SongDNA = ({ track }: { track: NonNullable<ReturnType<typeof usePlayer>["current"]> }) => {
-  // Best-effort, source-aware credits. We don't have a full music-credits
-  // database, so we surface what we know (source platform, identifiers,
-  // primary artist) plus a placeholder structure for producers/writers/
-  // performers/samples that can be filled by future integrations
-  // (e.g. MusicBrainz, Genius, ISRC lookups).
-  const Row = ({ label, value }: { label: string; value: string }) => (
+// SongDNA — full credits view, parsed from the track's title + artist.
+// Shows performers, producers, writers, remixers, samples, covers and
+// version tags (Live, Acoustic, Remastered, …) plus stable identifiers.
+const SongDNA = ({
+  track,
+}: {
+  track: NonNullable<ReturnType<typeof usePlayer>["current"]>;
+}) => {
+  const dna = useMemo(() => parseSongDNA(track), [track]);
+
+  const Section = ({
+    title,
+    items,
+    emptyHint,
+  }: {
+    title: string;
+    items: string[];
+    emptyHint?: string;
+  }) => (
+    <section className="space-y-1.5">
+      <h4 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+        {title}
+      </h4>
+      {items.length > 0 ? (
+        <div className="flex flex-wrap gap-1.5">
+          {items.map((item) => (
+            <span
+              key={item}
+              className="px-2 py-0.5 rounded-full bg-muted text-xs text-foreground/90 border border-border/50"
+            >
+              {item}
+            </span>
+          ))}
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground">{emptyHint || "Not available"}</p>
+      )}
+    </section>
+  );
+
+  const KV = ({ label, value }: { label: string; value: string }) => (
     <div className="flex items-baseline justify-between gap-3 py-1.5 border-b border-border/40 last:border-0">
-      <span className="text-xs uppercase tracking-wider text-muted-foreground">{label}</span>
-      <span className="text-sm text-foreground/90 text-right truncate">{value}</span>
+      <span className="text-xs uppercase tracking-wider text-muted-foreground shrink-0">
+        {label}
+      </span>
+      <span className="text-sm text-foreground/90 text-right truncate min-w-0">
+        {value}
+      </span>
     </div>
   );
+
   return (
-    <div className="rounded-xl bg-card/60 border border-border/50 p-4 space-y-3">
+    <div className="rounded-xl bg-card/60 border border-border/50 p-4 space-y-4">
       <div>
         <h3 className="text-sm font-semibold flex items-center gap-2">
           <Disc3 className="w-4 h-4 text-primary" /> SongDNA
         </h3>
-        <p className="text-xs text-muted-foreground">Credits, identifiers, samples & covers.</p>
+        <p className="text-xs text-muted-foreground">
+          Credits, identifiers, samples &amp; covers — parsed from this release.
+        </p>
       </div>
 
-      <section>
-        <h4 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Track</h4>
-        <Row label="Title" value={track.title} />
-        <Row label="Performer" value={track.artist} />
-        {track.album && <Row label="Album" value={track.album} />}
-        <Row label="Source" value={track.source === "youtube" ? "YouTube" : "Audius"} />
-        <Row label="Identifier" value={track.id} />
-        <Row label="Duration" value={fmt(track.duration)} />
+      <Section
+        title="Performers"
+        items={dna.performers}
+        emptyHint="Performer details not detected"
+      />
+      <Section
+        title="Producers"
+        items={dna.producers}
+        emptyHint="No producer credit found in metadata"
+      />
+      <Section
+        title="Writers"
+        items={dna.writers}
+        emptyHint="No writer / lyricist credit found"
+      />
+      {dna.remixers.length > 0 && (
+        <Section title="Remixers" items={dna.remixers} />
+      )}
+      {dna.versionTags.length > 0 && (
+        <Section title="Version" items={dna.versionTags} />
+      )}
+
+      <section className="space-y-1.5">
+        <h4 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+          Samples &amp; covers
+        </h4>
+        {dna.samples.length === 0 && dna.covers.length === 0 ? (
+          <p className="text-xs text-muted-foreground">
+            No sample or cover information detected for this track.
+          </p>
+        ) : (
+          <ul className="space-y-1">
+            {dna.samples.map((s) => (
+              <li key={`s-${s}`} className="text-sm text-foreground/90">
+                <span className="text-[10px] uppercase tracking-widest text-muted-foreground mr-2">
+                  Sample
+                </span>
+                {s}
+              </li>
+            ))}
+            {dna.covers.map((c) => (
+              <li key={`c-${c}`} className="text-sm text-foreground/90">
+                <span className="text-[10px] uppercase tracking-widest text-muted-foreground mr-2">
+                  Cover
+                </span>
+                {c}
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <section>
-        <h4 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Credits</h4>
-        <p className="text-xs text-muted-foreground">
-          Detailed producer, writer and performer credits will appear here when a credits provider is connected.
-        </p>
-      </section>
-
-      <section>
-        <h4 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Samples & covers</h4>
-        <p className="text-xs text-muted-foreground">
-          No sample data available for this track.
-        </p>
+        <h4 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">
+          Identifiers
+        </h4>
+        <KV label="Title" value={dna.title} />
+        <KV label="Duration" value={fmt(track.duration)} />
+        {dna.identifiers.map((id) => (
+          <KV key={id.label} label={id.label} value={id.value} />
+        ))}
       </section>
     </div>
   );
