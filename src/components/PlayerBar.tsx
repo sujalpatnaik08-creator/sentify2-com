@@ -12,10 +12,11 @@ import {
   VolumeX,
   Mic2,
   ListMusic,
+  ChevronUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 const fmt = (s: number) => {
   if (!isFinite(s) || s < 0) return "0:00";
@@ -27,11 +28,12 @@ const fmt = (s: number) => {
 interface PlayerBarProps {
   onToggleLyrics: () => void;
   onToggleQueue: () => void;
+  onOpenNowPlaying: () => void;
   showLyrics: boolean;
   showQueue: boolean;
 }
 
-export const PlayerBar = ({ onToggleLyrics, onToggleQueue, showLyrics, showQueue }: PlayerBarProps) => {
+export const PlayerBar = ({ onToggleLyrics, onToggleQueue, onOpenNowPlaying, showLyrics, showQueue }: PlayerBarProps) => {
   const {
     current,
     isPlaying,
@@ -49,24 +51,55 @@ export const PlayerBar = ({ onToggleLyrics, onToggleQueue, showLyrics, showQueue
     cycleRepeat,
   } = usePlayer();
   const [muted, setMuted] = useState(false);
+  const touchStartY = useRef<number | null>(null);
+
+  const onBarTouchStart = (e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY;
+  };
+  const onBarTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartY.current == null) return;
+    const dy = e.changedTouches[0].clientY - touchStartY.current;
+    if (dy < -60 && current) onOpenNowPlaying();
+    touchStartY.current = null;
+  };
 
   return (
-    <footer className="fixed bottom-0 left-0 right-0 z-50 glass border-t border-border/50 px-4 py-3">
+    <footer
+      className="fixed bottom-0 left-0 right-0 z-50 glass border-t border-border/50 px-4 py-3"
+      onTouchStart={onBarTouchStart}
+      onTouchEnd={onBarTouchEnd}
+    >
       <div className="grid grid-cols-3 items-center gap-4">
         {/* Track info */}
         <div className="flex items-center gap-3 min-w-0">
           {current ? (
             <>
-              <img
-                src={current.artwork}
-                alt={current.title}
-                className="w-14 h-14 rounded-md object-cover shadow-lg"
-                onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")}
-              />
-              <div className="min-w-0">
+              <button
+                type="button"
+                onClick={onOpenNowPlaying}
+                className="shrink-0 group relative"
+                aria-label="Open Now Playing"
+                title="Open Now Playing"
+              >
+                <img
+                  src={current.artwork}
+                  alt={current.title}
+                  className="w-14 h-14 rounded-md object-cover shadow-lg transition-transform group-hover:scale-105"
+                  onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")}
+                />
+                <span className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-md">
+                  <ChevronUp className="w-5 h-5 text-white" />
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={onOpenNowPlaying}
+                className="min-w-0 text-left hover:underline"
+                aria-label="Open Now Playing"
+              >
                 <div className="font-semibold truncate text-sm">{current.title}</div>
                 <div className="text-xs text-muted-foreground truncate">{current.artist}</div>
-              </div>
+              </button>
             </>
           ) : (
             <div className="text-sm text-muted-foreground">Pick a track to start listening</div>
