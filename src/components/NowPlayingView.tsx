@@ -46,6 +46,7 @@ import {
 import { usePlayer } from "@/contexts/PlayerContext";
 import { fetchLyrics, type LyricLine } from "@/lib/music-api";
 import { getArtistInfo, type ArtistInfo } from "@/lib/artist-info";
+import { parseSongDNA } from "@/lib/song-dna";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
