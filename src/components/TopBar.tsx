@@ -27,25 +27,7 @@ export const TopBar = () => {
   const navigate = useNavigate();
   const loc = useLocation();
   const [q, setQ] = useState("");
-  const { user, signOut } = useAuth();
-  const { theme, toggleTheme, autoTheme, setAutoTheme } = useTheme();
-  const {
-    crossfadeSec,
-    normalize,
-    autoplayContinuity,
-    audioEnhance,
-    soundQuality,
-    bassBoost,
-    backgroundPlayback,
-    setCrossfade,
-    setNormalize,
-    setAutoplayContinuity,
-    setAudioEnhance,
-    setSoundQuality,
-    setBassBoost,
-    setBackgroundPlayback,
-  } = usePlayer();
-  const [perf, setPerf] = useState(getPerfMode());
+  const { user } = useAuth();
   const [listening, setListening] = useState(false);
   const [identifying, setIdentifying] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
