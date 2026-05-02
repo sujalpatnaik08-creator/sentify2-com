@@ -1,10 +1,1 @@
-project_id = "ugmubwmdizalohhoedui"
-
-[functions.yt-search]
-verify_jwt = false
-
-[functions.translate-lyrics]
-verify_jwt = false
-
-[functions.recognize-song]
-verify_jwt = false
+project_id = "dqzbkbtulqdifhqldcwq"
