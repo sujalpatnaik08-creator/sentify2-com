@@ -1,57 +1,27 @@
 import {
   Headphones,
   LogIn,
-  LogOut,
   Mic,
   MicOff,
-  Moon,
   Search as SearchIcon,
-  Sun,
-  Zap,
   History,
   Loader2,
-  Settings,
-  X,
   ArrowRight,
-  Sparkles,
-  Volume2,
-  Waves,
-  Smartphone,
-  CalendarClock,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   addSearchHistory,
   clearSearchHistory,
-  getPerfMode,
   getSearchHistory,
-  setPerfMode,
 } from "@/lib/user-prefs";
 import { useAuth } from "@/contexts/AuthContext";
-import { useTheme } from "@/contexts/ThemeContext";
-import { usePlayer } from "@/contexts/PlayerContext";
 import { suggestQueries } from "@/lib/music-api";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { SessionsPanel } from "@/components/SessionsPanel";
+import { SettingsMenu } from "@/components/SettingsMenu";
 
 export const TopBar = () => {
   const navigate = useNavigate();
