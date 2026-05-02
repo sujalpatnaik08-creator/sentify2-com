@@ -747,49 +747,129 @@ const ArtistCard = ({
   );
 };
 
-const SongDNA = ({ track }: { track: NonNullable<ReturnType<typeof usePlayer>["current"]> }) => {
-  // Best-effort, source-aware credits. We don't have a full music-credits
-  // database, so we surface what we know (source platform, identifiers,
-  // primary artist) plus a placeholder structure for producers/writers/
-  // performers/samples that can be filled by future integrations
-  // (e.g. MusicBrainz, Genius, ISRC lookups).
-  const Row = ({ label, value }: { label: string; value: string }) => (
+// SongDNA — full credits view, parsed from the track's title + artist.
+// Shows performers, producers, writers, remixers, samples, covers and
+// version tags (Live, Acoustic, Remastered, …) plus stable identifiers.
+const SongDNA = ({
+  track,
+}: {
+  track: NonNullable<ReturnType<typeof usePlayer>["current"]>;
+}) => {
+  const dna = useMemo(() => parseSongDNA(track), [track]);
+
+  const Section = ({
+    title,
+    items,
+    emptyHint,
+  }: {
+    title: string;
+    items: string[];
+    emptyHint?: string;
+  }) => (
+    <section className="space-y-1.5">
+      <h4 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+        {title}
+      </h4>
+      {items.length > 0 ? (
+        <div className="flex flex-wrap gap-1.5">
+          {items.map((item) => (
+            <span
+              key={item}
+              className="px-2 py-0.5 rounded-full bg-muted text-xs text-foreground/90 border border-border/50"
+            >
+              {item}
+            </span>
+          ))}
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground">{emptyHint || "Not available"}</p>
+      )}
+    </section>
+  );
+
+  const KV = ({ label, value }: { label: string; value: string }) => (
     <div className="flex items-baseline justify-between gap-3 py-1.5 border-b border-border/40 last:border-0">
-      <span className="text-xs uppercase tracking-wider text-muted-foreground">{label}</span>
-      <span className="text-sm text-foreground/90 text-right truncate">{value}</span>
+      <span className="text-xs uppercase tracking-wider text-muted-foreground shrink-0">
+        {label}
+      </span>
+      <span className="text-sm text-foreground/90 text-right truncate min-w-0">
+        {value}
+      </span>
     </div>
   );
+
   return (
-    <div className="rounded-xl bg-card/60 border border-border/50 p-4 space-y-3">
+    <div className="rounded-xl bg-card/60 border border-border/50 p-4 space-y-4">
       <div>
         <h3 className="text-sm font-semibold flex items-center gap-2">
           <Disc3 className="w-4 h-4 text-primary" /> SongDNA
         </h3>
-        <p className="text-xs text-muted-foreground">Credits, identifiers, samples & covers.</p>
+        <p className="text-xs text-muted-foreground">
+          Credits, identifiers, samples &amp; covers — parsed from this release.
+        </p>
       </div>
 
-      <section>
-        <h4 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Track</h4>
-        <Row label="Title" value={track.title} />
-        <Row label="Performer" value={track.artist} />
-        {track.album && <Row label="Album" value={track.album} />}
-        <Row label="Source" value={track.source === "youtube" ? "YouTube" : "Audius"} />
-        <Row label="Identifier" value={track.id} />
-        <Row label="Duration" value={fmt(track.duration)} />
+      <Section
+        title="Performers"
+        items={dna.performers}
+        emptyHint="Performer details not detected"
+      />
+      <Section
+        title="Producers"
+        items={dna.producers}
+        emptyHint="No producer credit found in metadata"
+      />
+      <Section
+        title="Writers"
+        items={dna.writers}
+        emptyHint="No writer / lyricist credit found"
+      />
+      {dna.remixers.length > 0 && (
+        <Section title="Remixers" items={dna.remixers} />
+      )}
+      {dna.versionTags.length > 0 && (
+        <Section title="Version" items={dna.versionTags} />
+      )}
+
+      <section className="space-y-1.5">
+        <h4 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+          Samples &amp; covers
+        </h4>
+        {dna.samples.length === 0 && dna.covers.length === 0 ? (
+          <p className="text-xs text-muted-foreground">
+            No sample or cover information detected for this track.
+          </p>
+        ) : (
+          <ul className="space-y-1">
+            {dna.samples.map((s) => (
+              <li key={`s-${s}`} className="text-sm text-foreground/90">
+                <span className="text-[10px] uppercase tracking-widest text-muted-foreground mr-2">
+                  Sample
+                </span>
+                {s}
+              </li>
+            ))}
+            {dna.covers.map((c) => (
+              <li key={`c-${c}`} className="text-sm text-foreground/90">
+                <span className="text-[10px] uppercase tracking-widest text-muted-foreground mr-2">
+                  Cover
+                </span>
+                {c}
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <section>
-        <h4 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Credits</h4>
-        <p className="text-xs text-muted-foreground">
-          Detailed producer, writer and performer credits will appear here when a credits provider is connected.
-        </p>
-      </section>
-
-      <section>
-        <h4 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Samples & covers</h4>
-        <p className="text-xs text-muted-foreground">
-          No sample data available for this track.
-        </p>
+        <h4 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">
+          Identifiers
+        </h4>
+        <KV label="Title" value={dna.title} />
+        <KV label="Duration" value={fmt(track.duration)} />
+        {dna.identifiers.map((id) => (
+          <KV key={id.label} label={id.label} value={id.value} />
+        ))}
       </section>
     </div>
   );
