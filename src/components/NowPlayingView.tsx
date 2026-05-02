@@ -554,7 +554,9 @@ const TabBtn = ({
 
 interface LyricsBlockProps {
   status: "idle" | "loading" | "ready" | "none" | "error";
-  translating: boolean;
+  // The language currently being fetched (null when idle). Used for per-language
+  // loading states next to the dropdown so the lyrics body never flashes.
+  translatingLang: string | null;
   displaySynced: LyricLine[] | null;
   displayPlain: string | null;
   activeIdx: number;
@@ -567,7 +569,7 @@ interface LyricsBlockProps {
 
 const LyricsBlock = ({
   status,
-  translating,
+  translatingLang,
   displaySynced,
   displayPlain,
   activeIdx,
@@ -577,6 +579,12 @@ const LyricsBlock = ({
   onLangChange,
   big,
 }: LyricsBlockProps) => {
+  // Subtle dim when a translation is in flight so the lyrics body never flashes
+  // empty / re-mounts. Source lines stay in place; translation swaps in once
+  // ready. Combined with stable line keys (time-based) below, this prevents
+  // the previous "glitchy" re-render seen on language change.
+  const isTranslatingNew = !!translatingLang && translatingLang !== "off";
+  const translatingLabel = TRANSLATE_LANGS.find((l) => l.code === translatingLang)?.label;
   return (
     <>
       <div className="flex items-center gap-2 mb-3 px-1">
@@ -586,11 +594,17 @@ const LyricsBlock = ({
             <SelectValue placeholder="Translate to…" />
           </SelectTrigger>
           <SelectContent className="max-h-72">
-            {TRANSLATE_LANGS.map((l) => (
-              <SelectItem key={l.code} value={l.code} className="text-xs">
-                {l.label}
-              </SelectItem>
-            ))}
+            {TRANSLATE_LANGS.map((l) => {
+              const loading = translatingLang === l.code;
+              return (
+                <SelectItem key={l.code} value={l.code} className="text-xs">
+                  <span className="inline-flex items-center gap-1.5">
+                    {loading && <Loader2 className="w-3 h-3 animate-spin" />}
+                    {l.label}
+                  </span>
+                </SelectItem>
+              );
+            })}
           </SelectContent>
         </Select>
         {targetLang !== "off" && (
@@ -604,11 +618,21 @@ const LyricsBlock = ({
             <RotateCcw className="w-4 h-4" />
           </Button>
         )}
-        {translating && <Loader2 className="w-4 h-4 animate-spin text-primary" />}
+        {isTranslatingNew && (
+          <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+            <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+            <span className="hidden sm:inline">Translating to {translatingLabel}…</span>
+          </span>
+        )}
       </div>
 
       <ScrollArea className={cn(big ? "h-[calc(100dvh-220px)]" : "max-h-[40vh]")}>
-        <div className="px-2 pb-8">
+        <div
+          className={cn(
+            "px-2 pb-8 transition-opacity duration-200",
+            isTranslatingNew && "opacity-70",
+          )}
+        >
           {status === "loading" ? (
             <div className="flex flex-col items-center mt-6 gap-2">
               <Loader2 className="w-5 h-5 animate-spin text-primary" />
@@ -622,16 +646,20 @@ const LyricsBlock = ({
             <div className={cn("space-y-2", big && "space-y-4")}>
               {displaySynced.map((line, i) => {
                 const isActive = i === activeIdx;
+                // Stable, time-based key so React reuses the same DOM nodes
+                // when the text changes (translation swap) — preventing the
+                // re-mount flicker and keeping the active highlight steady.
                 return (
                   <div
-                    key={i}
+                    key={`${line.time.toFixed(3)}-${i}`}
                     ref={isActive ? activeLineRef : null}
                     onClick={() => onLineClick(line.time)}
                     className={cn(
-                      "cursor-pointer rounded transition-all leading-relaxed whitespace-pre-line px-1",
+                      "cursor-pointer rounded leading-relaxed whitespace-pre-line px-1",
+                      "transition-colors duration-200",
                       big ? "text-lg sm:text-xl" : "text-sm",
                       isActive
-                        ? "text-primary font-semibold scale-[1.02]"
+                        ? "text-primary font-semibold"
                         : i < activeIdx
                           ? "text-muted-foreground/60 hover:text-foreground"
                           : "text-foreground/75 hover:text-foreground",
