@@ -13,6 +13,7 @@ import {
   ArrowLeft,
   Bell,
   CalendarClock,
+  Check,
   ChevronRight,
   CircleUserRound,
   Download,
@@ -21,15 +22,16 @@ import {
   Lock,
   LogIn,
   LogOut,
-  Megaphone,
   Moon,
   Music2,
+  Pencil,
   Settings as SettingsIcon,
   Smartphone,
   Sparkles,
   Sun,
   Volume2,
   Waves,
+  X,
   Zap,
 } from "lucide-react";
 import {
@@ -43,6 +45,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -57,6 +60,8 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { getPerfMode, setPerfMode } from "@/lib/user-prefs";
 import { SessionsPanel } from "@/components/SessionsPanel";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 type SectionId =
@@ -69,7 +74,6 @@ type SectionId =
   | "apps"
   | "data"
   | "quality"
-  | "ads"
   | "about";
 
 interface RowDef {
@@ -88,7 +92,6 @@ const ROWS: RowDef[] = [
   { id: "apps", icon: Smartphone, title: "Apps and devices", subtitle: "Google Maps · Spotify Connect control" },
   { id: "data", icon: Download, title: "Data-saving and offline", subtitle: "Data Saver mode · Downloads over cellular" },
   { id: "quality", icon: ListMusic, title: "Sound quality", subtitle: "Wi-Fi streaming quality · Audio download quality" },
-  { id: "ads", icon: Megaphone, title: "Advertisements", subtitle: "Tailored ads" },
   { id: "about", icon: Info, title: "About and support", subtitle: "Version · Privacy Policy" },
 ];
 
@@ -242,7 +245,37 @@ const SectionPanel = ({
   const [publicPlaylists, setPublicPlaylists] = useState(true);
   const [dataSaver, setDataSaver] = useState(false);
   const [downloadsOverCellular, setDownloadsOverCellular] = useState(false);
-  const [tailoredAds, setTailoredAds] = useState(false);
+
+  // Editable username (stored in user metadata, falls back to email handle).
+  const initialUsername =
+    (user?.user_metadata?.username as string | undefined) ||
+    user?.email?.split("@")[0] ||
+    "";
+  const [usernameDraft, setUsernameDraft] = useState(initialUsername);
+  const [editingUsername, setEditingUsername] = useState(false);
+  const [savingUsername, setSavingUsername] = useState(false);
+
+  useEffect(() => {
+    setUsernameDraft(initialUsername);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  const saveUsername = async () => {
+    const next = usernameDraft.trim();
+    if (!next || next.length < 2 || next.length > 32) {
+      toast.error("Username must be 2–32 characters");
+      return;
+    }
+    setSavingUsername(true);
+    const { error } = await supabase.auth.updateUser({ data: { username: next } });
+    setSavingUsername(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Username updated");
+    setEditingUsername(false);
+  };
 
   const requestPush = async () => {
     if (typeof Notification === "undefined") return;
@@ -263,6 +296,58 @@ const SectionPanel = ({
               <div className="pb-3 mb-2 border-b border-border/40">
                 <p className="text-xs uppercase tracking-wider text-muted-foreground">Signed in as</p>
                 <p className="text-sm font-medium truncate">{user.email}</p>
+              </div>
+              <div className="pb-3 mb-2 border-b border-border/40">
+                <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1.5">
+                  Username
+                </p>
+                {editingUsername ? (
+                  <div className="flex items-center gap-1.5">
+                    <Input
+                      value={usernameDraft}
+                      onChange={(e) => setUsernameDraft(e.target.value)}
+                      maxLength={32}
+                      placeholder="Your username"
+                      className="h-9"
+                      autoFocus
+                    />
+                    <Button
+                      size="icon"
+                      className="h-9 w-9 shrink-0"
+                      onClick={saveUsername}
+                      disabled={savingUsername}
+                      aria-label="Save username"
+                    >
+                      <Check className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 shrink-0"
+                      onClick={() => {
+                        setUsernameDraft(initialUsername);
+                        setEditingUsername(false);
+                      }}
+                      aria-label="Cancel"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium truncate">
+                      {usernameDraft || "Not set"}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 gap-1.5"
+                      onClick={() => setEditingUsername(true)}
+                    >
+                      <Pencil className="w-3.5 h-3.5" /> Edit
+                    </Button>
+                  </div>
+                )}
               </div>
               <Button
                 variant="ghost"
@@ -523,21 +608,6 @@ const SectionPanel = ({
               </Select>
             }
           />
-        </div>
-      );
-
-    case "ads":
-      return (
-        <div>
-          <Field
-            label="Tailored ads"
-            description="Personalize ads based on your listening"
-            control={<Switch checked={tailoredAds} onCheckedChange={setTailoredAds} />}
-          />
-          <p className="text-xs text-muted-foreground pt-3">
-            Sentify is ad-free for signed-in users. This setting only affects future
-            promotional content.
-          </p>
         </div>
       );
 

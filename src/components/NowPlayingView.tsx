@@ -42,6 +42,7 @@ import {
   Music2,
   Disc3,
   User,
+  Info,
 } from "lucide-react";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { fetchLyrics, type LyricLine } from "@/lib/music-api";
@@ -478,7 +479,7 @@ export const NowPlayingView = ({ open, onOpenChange }: Props) => {
               <div className="mt-6 grid grid-cols-3 gap-1 rounded-lg bg-muted/40 p-1">
                 <TabBtn active={tab === "lyrics"} onClick={() => setTab("lyrics")} icon={<Music2 className="w-4 h-4" />} label="Lyrics" />
                 <TabBtn active={tab === "artist"} onClick={() => setTab("artist")} icon={<User className="w-4 h-4" />} label="Artist" />
-                <TabBtn active={tab === "dna"} onClick={() => setTab("dna")} icon={<Disc3 className="w-4 h-4" />} label="SongDNA" />
+                <TabBtn active={tab === "dna"} onClick={() => setTab("dna")} icon={<Info className="w-4 h-4" />} label="About" />
               </div>
 
               {/* Tab content */}
@@ -803,7 +804,10 @@ const SongDNA = ({
     <div className="rounded-xl bg-card/60 border border-border/50 p-4 space-y-4">
       <div>
         <h3 className="text-sm font-semibold flex items-center gap-2">
-          <Disc3 className="w-4 h-4 text-primary" /> SongDNA
+          <span className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-primary/15 text-primary">
+            <Info className="w-3.5 h-3.5" />
+          </span>
+          About this song
         </h3>
         <p className="text-xs text-muted-foreground">
           Credits, identifiers, samples &amp; covers — parsed from this release.
