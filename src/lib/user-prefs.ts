@@ -17,7 +17,23 @@ const K = {
   soundQuality: "sentify_sound_q",     // "high" | "medium" | "low"
   bassBoost: "sentify_bass_boost",     // "1" | "0"
   bgPlayback: "sentify_bg_playback",   // "1" | "0"  — Media Session + Wake Lock
+  defaultLyricsLang: "sentify_lyrics_lang", // string code — auto-translate target
+  alwaysTranslate: "sentify_lyrics_always", // "1" | "0"
 };
+
+// ---------- Lyrics translation defaults ----------
+export function getDefaultLyricsLang(): string {
+  try { return localStorage.getItem(K.defaultLyricsLang) || "off"; } catch { return "off"; }
+}
+export function setDefaultLyricsLang(code: string) {
+  try { localStorage.setItem(K.defaultLyricsLang, code); } catch { /* */ }
+}
+export function getAlwaysTranslate(): boolean {
+  try { return localStorage.getItem(K.alwaysTranslate) === "1"; } catch { return false; }
+}
+export function setAlwaysTranslate(on: boolean) {
+  try { localStorage.setItem(K.alwaysTranslate, on ? "1" : "0"); } catch { /* */ }
+}
 
 // ---------- Auto theme schedule (6 AM .. 6 PM = light, else dark) ----------
 export function getAutoTheme(): boolean {

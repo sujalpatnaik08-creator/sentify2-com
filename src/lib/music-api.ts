@@ -109,6 +109,23 @@ const norm = (s: string) =>
 
 const tokens = (s: string) => norm(s).split(" ").filter(Boolean);
 
+// Taste profile: recently-played artists + favorite artists. Computed once
+// per ranking pass to avoid repeated localStorage reads.
+let _tasteCache: { ts: number; artists: Set<string> } | null = null;
+const getTasteArtists = (): Set<string> => {
+  if (_tasteCache && Date.now() - _tasteCache.ts < 30_000) return _tasteCache.artists;
+  const set = new Set<string>();
+  try {
+    const recent = JSON.parse(localStorage.getItem("sentify_recently_played") || "[]") as Array<{ artist?: string }>;
+    for (const t of recent) if (t.artist) set.add(norm(t.artist));
+    const fav = JSON.parse(localStorage.getItem("sentify_fav_artists") || "[]") as Array<{ name?: string }>;
+    for (const a of fav) if (a.name) set.add(norm(a.name));
+  } catch { /* */ }
+  _tasteCache = { ts: Date.now(), artists: set };
+  return set;
+};
+export const invalidateTasteCache = () => { _tasteCache = null; };
+
 const relevanceScore = (q: string, v: YtVideo): number => {
   const query = norm(q);
   if (!query) return 0;
@@ -117,12 +134,19 @@ const relevanceScore = (q: string, v: YtVideo): number => {
   const hay = `${title} ${artist}`;
 
   let r = 0;
-  if (title === query) r += 12;            // exact title match
-  if (title.startsWith(query)) r += 6;     // prefix match
-  if (title.includes(query)) r += 4;       // substring in title
-  if (artist === query) r += 5;            // exact artist match
+  // NIS: stronger prefix/character-level ranking so the typed song surfaces first.
+  if (title === query) r += 18;            // exact title match
+  if (title.startsWith(query)) r += 10;    // prefix match (Spotify-style)
+  if (title.includes(query)) r += 5;       // substring in title
+  if (artist === query) r += 7;            // exact artist match
+  if (artist.startsWith(query)) r += 4;
   if (artist.includes(query)) r += 2;
   if (hay.includes(query)) r += 1;
+  // Character-level overlap for typo tolerance (common prefix length)
+  let cp = 0;
+  const minLen = Math.min(query.length, title.length);
+  for (let i = 0; i < minLen; i++) { if (query[i] === title[i]) cp++; else break; }
+  r += (cp / Math.max(1, query.length)) * 3;
 
   // token coverage — what fraction of query tokens appear in title+artist?
   const qTokens = tokens(q);
@@ -130,6 +154,13 @@ const relevanceScore = (q: string, v: YtVideo): number => {
     const matched = qTokens.filter((t) => hay.includes(t)).length;
     r += (matched / qTokens.length) * 4;
     if (matched === qTokens.length) r += 2; // all tokens present
+  }
+
+  // Taste-profile boost: artists the user has listened to recently / favorited
+  const taste = getTasteArtists();
+  if (taste.size > 0) {
+    if (taste.has(artist)) r += 2.5;
+    else for (const a of taste) { if (a && (artist.includes(a) || a.includes(artist))) { r += 1.2; break; } }
   }
 
   // Penalize obvious non-song noise
