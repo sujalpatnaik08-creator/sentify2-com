@@ -12,7 +12,7 @@ const Auth = () => {
   const { session, loading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [mode, setMode] = useState<"signin" | "signup" | "forgot">("signin");
   const [busy, setBusy] = useState(false);
 
   if (loading) {
@@ -26,6 +26,20 @@ const Auth = () => {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (mode === "forgot") {
+      if (!email.trim()) { toast.error("Enter your email."); return; }
+      setBusy(true);
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      setBusy(false);
+      if (error) toast.error(error.message);
+      else {
+        toast.success("Password reset link sent. Check your email.");
+        setMode("signin");
+      }
+      return;
+    }
     if (!email.trim() || password.length < 6) {
       toast.error("Enter your email and a password (6+ characters).");
       return;
@@ -63,22 +77,30 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-background">
-      <div className="w-full max-w-sm">
-        <div className="flex flex-col items-center mb-10">
-          <div className="w-11 h-11 rounded-full bg-foreground text-background flex items-center justify-center mb-4">
-            <Music2 className="w-5 h-5" />
+    <div className="relative min-h-screen flex items-center justify-center p-6 bg-background overflow-hidden">
+      {/* 3D animated gradient blobs */}
+      <div aria-hidden className="pointer-events-none absolute inset-0">
+        <div className="absolute -top-32 -left-32 w-[28rem] h-[28rem] rounded-full bg-primary/30 blur-3xl animate-[pulse_6s_ease-in-out_infinite]" />
+        <div className="absolute -bottom-32 -right-32 w-[32rem] h-[32rem] rounded-full bg-fuchsia-500/20 blur-3xl animate-[pulse_8s_ease-in-out_infinite]" />
+        <div className="absolute top-1/3 right-1/4 w-72 h-72 rounded-full bg-cyan-400/20 blur-3xl animate-[pulse_7s_ease-in-out_infinite]" />
+      </div>
+      <div
+        className="relative w-full max-w-sm rounded-3xl border border-white/10 bg-background/60 backdrop-blur-2xl p-8 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.6)] [transform-style:preserve-3d] [perspective:1200px] hover:[transform:rotateX(2deg)_rotateY(-2deg)] transition-transform duration-500"
+      >
+        <div className="flex flex-col items-center mb-8">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-fuchsia-500 text-primary-foreground flex items-center justify-center mb-4 shadow-xl shadow-primary/40 [transform:translateZ(20px)]">
+            <Music2 className="w-6 h-6" />
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight">Sentify</h1>
+          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text text-transparent">Sentify</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {mode === "signin" ? "Sign in to your account" : "Create your account"}
+            {mode === "signin" ? "Sign in to your account" : mode === "signup" ? "Create your account" : "Reset your password"}
           </p>
         </div>
 
         <Button
           onClick={googleSignIn}
           variant="outline"
-          className="w-full h-11 font-medium"
+          className="w-full h-11 font-medium rounded-xl"
           type="button"
         >
           <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" aria-hidden>
@@ -104,33 +126,54 @@ const Auth = () => {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Email"
-            className="h-11"
+            className="h-11 rounded-xl"
             autoComplete="email"
           />
-          <Input
-            type="password"
-            required
-            minLength={6}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Password"
-            className="h-11"
-            autoComplete={mode === "signin" ? "current-password" : "new-password"}
-          />
-          <Button type="submit" disabled={busy} className="w-full h-11 font-medium">
-            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : mode === "signin" ? "Sign in" : "Create account"}
+          {mode !== "forgot" && (
+            <Input
+              type="password"
+              required
+              minLength={6}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              className="h-11 rounded-xl"
+              autoComplete={mode === "signin" ? "current-password" : "new-password"}
+            />
+          )}
+          {mode === "signin" && (
+            <div className="text-right -mt-1">
+              <button
+                type="button"
+                className="text-xs text-muted-foreground hover:text-foreground"
+                onClick={() => setMode("forgot")}
+              >
+                Forgot password?
+              </button>
+            </div>
+          )}
+          <Button type="submit" disabled={busy} className="w-full h-11 font-medium rounded-xl shadow-lg shadow-primary/30">
+            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : mode === "signin" ? "Sign in" : mode === "signup" ? "Create account" : "Send reset link"}
           </Button>
         </form>
 
         <p className="text-center text-sm text-muted-foreground mt-6">
-          {mode === "signin" ? "Don't have an account?" : "Already have an account?"}{" "}
-          <button
-            type="button"
-            className="text-foreground font-medium hover:underline"
-            onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-          >
-            {mode === "signin" ? "Sign up" : "Sign in"}
-          </button>
+          {mode === "forgot" ? (
+            <button type="button" className="text-foreground font-medium hover:underline" onClick={() => setMode("signin")}>
+              Back to sign in
+            </button>
+          ) : (
+            <>
+              {mode === "signin" ? "Don't have an account?" : "Already have an account?"}{" "}
+              <button
+                type="button"
+                className="text-foreground font-medium hover:underline"
+                onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
+              >
+                {mode === "signin" ? "Sign up" : "Sign in"}
+              </button>
+            </>
+          )}
         </p>
       </div>
     </div>
