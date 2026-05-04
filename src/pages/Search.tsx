@@ -380,7 +380,7 @@ const Search = () => {
           <tr className="text-muted-foreground border-b border-border/50 text-left">
             <th className="font-normal py-3 pl-3 pr-2 w-12">#</th>
             <th className="font-normal py-3 px-2">Title</th>
-            <th className="font-normal py-3 px-2 hidden md:table-cell">Artist</th>
+            <th className="font-normal py-3 px-2 hidden md:table-cell sr-only">Artist</th>
             <th className="font-normal py-3 px-2 hidden lg:table-cell w-24">Language</th>
             <th className="font-normal py-3 px-2 w-12"></th>
             <th className="font-normal py-3 px-2 w-32">Download</th>
@@ -437,7 +437,7 @@ const Search = () => {
                       </div>
                     </div>
                   </td>
-                  <td className="py-2 px-2 text-muted-foreground hidden md:table-cell truncate max-w-[260px]">{t.artist}</td>
+                  <td className="py-2 px-2 hidden"></td>
                   <td className="py-2 px-2 hidden lg:table-cell">
                     <span className={cn("inline-flex items-center px-2 py-0.5 rounded-full border text-[10px] font-medium", LANG_COLORS[lang])}>
                       {LANG_LABEL[lang]}
