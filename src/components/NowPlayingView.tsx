@@ -285,6 +285,9 @@ export const NowPlayingView = ({ open, onOpenChange }: Props) => {
 
   const onLangChange = (next: string) => {
     setTargetLang(next);
+    // Persist the choice + enable mandatory auto-translate for every song.
+    setDefaultLyricsLang(next);
+    setAlwaysTranslate(next !== "off");
     if (next === "off") {
       // Clear immediately on "Original" — no debounce needed.
       void runTranslate("off");
