@@ -29,6 +29,7 @@ import {
   Smartphone,
   Sparkles,
   Sun,
+  KeyRound,
   Volume2,
   Waves,
   X,
@@ -255,6 +256,41 @@ const SectionPanel = ({
   const [editingUsername, setEditingUsername] = useState(false);
   const [savingUsername, setSavingUsername] = useState(false);
 
+  // Change-password (signed-in user). Requires current password to re-auth,
+  // then updates and triggers Supabase's password-changed email notification.
+  const [pwOpen, setPwOpen] = useState(false);
+  const [pwCurrent, setPwCurrent] = useState("");
+  const [pwNext, setPwNext] = useState("");
+  const [pwBusy, setPwBusy] = useState(false);
+  const changePassword = async () => {
+    if (!user?.email) return;
+    if (pwNext.length < 6) { toast.error("New password must be 6+ characters"); return; }
+    setPwBusy(true);
+    const { error: signInErr } = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password: pwCurrent,
+    });
+    if (signInErr) {
+      setPwBusy(false);
+      toast.error("Current password is incorrect");
+      return;
+    }
+    const { error } = await supabase.auth.updateUser({ password: pwNext });
+    setPwBusy(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Password changed. A confirmation email has been sent.");
+    setPwCurrent(""); setPwNext(""); setPwOpen(false);
+  };
+
+  const sendResetLink = async () => {
+    if (!user?.email) return;
+    const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    if (error) toast.error(error.message);
+    else toast.success(`Reset link sent to ${user.email}`);
+  };
+
   useEffect(() => {
     setUsernameDraft(initialUsername);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -363,6 +399,60 @@ const SectionPanel = ({
               >
                 Downloads
               </Button>
+              {/* Password security */}
+              <div className="pt-3 mt-2 border-t border-border/40">
+                <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
+                  Password & security
+                </p>
+                {!pwOpen ? (
+                  <div className="space-y-1">
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start h-10"
+                      onClick={() => setPwOpen(true)}
+                    >
+                      <KeyRound className="w-4 h-4 mr-2" /> Change password
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start h-10"
+                      onClick={sendResetLink}
+                    >
+                      Send reset link to email
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-2 p-2 rounded-lg bg-card/40 border border-border/40">
+                    <Input
+                      type="password"
+                      placeholder="Current password"
+                      value={pwCurrent}
+                      onChange={(e) => setPwCurrent(e.target.value)}
+                      className="h-9"
+                      autoComplete="current-password"
+                    />
+                    <Input
+                      type="password"
+                      placeholder="New password (6+ chars)"
+                      value={pwNext}
+                      onChange={(e) => setPwNext(e.target.value)}
+                      className="h-9"
+                      autoComplete="new-password"
+                    />
+                    <div className="flex gap-2">
+                      <Button size="sm" className="flex-1" onClick={changePassword} disabled={pwBusy}>
+                        {pwBusy ? "Updating…" : "Update password"}
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => { setPwOpen(false); setPwCurrent(""); setPwNext(""); }}>
+                        Cancel
+                      </Button>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      A confirmation email is sent to {user.email} when your password changes.
+                    </p>
+                  </div>
+                )}
+              </div>
               <Button
                 variant="ghost"
                 className="w-full justify-start h-10 text-destructive hover:text-destructive"

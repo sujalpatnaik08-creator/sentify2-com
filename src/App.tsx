@@ -8,6 +8,7 @@ import Home from "./pages/Home.tsx";
 import Search from "./pages/Search.tsx";
 import Library from "./pages/Library.tsx";
 import Auth from "./pages/Auth.tsx";
+import ResetPassword from "./pages/ResetPassword.tsx";
 import Downloads from "./pages/Downloads.tsx";
 import Artist from "./pages/Artist.tsx";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -41,6 +42,7 @@ const App = () => (
             <BrowserRouter>
               <Routes>
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
                 {/* Home is the only public app page before sign-in */}
                 <Route path="/" element={<Public><Home /></Public>} />
                 {/* Everything else requires sign-in */}

@@ -424,17 +424,16 @@ const Search = () => {
                       </button>
                     </div>
                   </td>
-                  <td className="py-2 px-2">
-                    <div className="flex items-center gap-3 min-w-0">
+                  <td className="py-3 px-2">
+                    <div className="flex items-center gap-4 min-w-0">
                       <img
                         src={t.artwork}
                         alt={t.title}
-                        className="w-10 h-10 rounded object-cover shrink-0"
+                        className="w-14 h-14 rounded-md object-cover shrink-0 shadow"
                         onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")}
                       />
                       <div className="min-w-0">
-                        <div className={cn("truncate font-medium", isCurrent && "text-primary")}>{t.title}</div>
-                        <div className="md:hidden text-xs text-muted-foreground truncate">{t.artist}</div>
+                        <div className={cn("truncate text-lg font-semibold", isCurrent && "text-primary")}>{t.title}</div>
                       </div>
                     </div>
                   </td>
