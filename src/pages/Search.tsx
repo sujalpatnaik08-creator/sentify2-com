@@ -146,9 +146,12 @@ const Search = () => {
   // (sentinelRef removed — using explicit "Show more" button instead)
 
   // ---------- Initial / re-search ----------
+  const reqIdRef = useRef(0);
   const runSearch = useCallback(async (query: string) => {
+    const myReq = ++reqIdRef.current;
     if (!query.trim()) {
       setTracks([]); setArtists([]); setPlaylists([]); setError(null); setHasMore(false);
+      setLoading(false);
       return;
     }
     setLoading(true);
@@ -158,23 +161,27 @@ const Search = () => {
     const t0 = performance.now();
     try {
       const data = await searchAll(query, 40);
+      if (myReq !== reqIdRef.current) return; // stale
       setTracks(data.tracks);
       setArtists(data.artists);
       setPlaylists(data.playlists);
       setHasMore(data.tracks.length >= 20);
     } catch (err) {
+      if (myReq !== reqIdRef.current) return;
       setTracks([]); setArtists([]); setPlaylists([]);
       setError(err instanceof Error ? err.message : "Something went wrong while searching.");
       setHasMore(false);
     } finally {
-      setLastDuration(Math.round(performance.now() - t0));
-      setLoading(false);
+      if (myReq === reqIdRef.current) {
+        setLastDuration(Math.round(performance.now() - t0));
+        setLoading(false);
+      }
     }
   }, []);
 
   useEffect(() => {
-    // Spotify-like snappy search: 180ms debounce
-    const id = setTimeout(() => runSearch(q), 180);
+    // Snappy debounce; cache + in-flight dedup make repeats instant.
+    const id = setTimeout(() => runSearch(q), 140);
     return () => clearTimeout(id);
   }, [q, attempt, runSearch]);
 
