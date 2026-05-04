@@ -3,19 +3,20 @@ import { Play, Pause, Plus } from "lucide-react";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { forwardRef } from "react";
 
 interface TrackCardProps {
   track: Track;
   queue: Track[];
 }
 
-export const TrackCard = ({ track, queue }: TrackCardProps) => {
+export const TrackCard = forwardRef<HTMLDivElement, TrackCardProps>(({ track, queue }, ref) => {
   const { current, isPlaying, playTrack, togglePlay, addToQueue } = usePlayer();
   const isCurrent = current?.id === track.id;
   const showPause = isCurrent && isPlaying;
 
   return (
-    <div className="group relative bg-card/40 hover:bg-card/80 rounded-xl p-4 transition-all duration-300 hover:shadow-[var(--shadow-card)] cursor-pointer">
+    <div ref={ref} className="group relative bg-card/40 hover:bg-card/80 rounded-xl p-4 transition-all duration-300 hover:shadow-[var(--shadow-card)] cursor-pointer">
       <div className="relative aspect-square mb-3 rounded-lg overflow-hidden bg-muted">
         <img
           src={track.artwork}
@@ -39,7 +40,6 @@ export const TrackCard = ({ track, queue }: TrackCardProps) => {
       </div>
       <div className="space-y-1">
         <h3 className={cn("font-semibold truncate", isCurrent && "text-primary")}>{track.title}</h3>
-        <p className="text-sm text-muted-foreground truncate">{track.artist}</p>
       </div>
       <Button
         variant="ghost"
@@ -55,4 +55,5 @@ export const TrackCard = ({ track, queue }: TrackCardProps) => {
       </Button>
     </div>
   );
-};
+});
+TrackCard.displayName = "TrackCard";
