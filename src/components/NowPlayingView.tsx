@@ -99,6 +99,7 @@ export const NowPlayingView = ({ open, onOpenChange }: Props) => {
   const [tab, setTab] = useState<"lyrics" | "artist" | "dna">("lyrics");
   const [lyricsExpanded, setLyricsExpanded] = useState(false);
   const [liked, setLiked] = useState(false);
+  const [queueOpen, setQueueOpen] = useState(false);
 
   // Lyrics state — `synced` and `plain` are the SOURCE (untranslated) copies.
   // Translations are stored separately in `translatedSynced` / `translatedPlain`,
@@ -361,15 +362,27 @@ export const NowPlayingView = ({ open, onOpenChange }: Props) => {
               {current.album || current.artist}
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setLiked((v) => !v)}
-            aria-label={liked ? "Unlike" : "Like"}
-          >
-            <Heart className={cn("w-5 h-5", liked && "fill-primary text-primary")} />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setQueueOpen(true)}
+              aria-label="Open queue"
+              title="Queue"
+            >
+              <ListMusic className="w-5 h-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setLiked((v) => !v)}
+              aria-label={liked ? "Unlike" : "Like"}
+            >
+              <Heart className={cn("w-5 h-5", liked && "fill-primary text-primary")} />
+            </Button>
+          </div>
         </header>
+        {queueOpen && <QueuePanel onClose={() => setQueueOpen(false)} />}
 
         {/* Body — two layouts: lyrics-expanded vs default */}
         {lyricsExpanded ? (
