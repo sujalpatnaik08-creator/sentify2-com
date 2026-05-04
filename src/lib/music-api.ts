@@ -484,23 +484,31 @@ const cacheSet = (k: string, data: SearchResults) => {
   }
 };
 
+// In-flight dedup so rapid keystrokes don't fan out duplicate requests.
+const inflight = new Map<string, Promise<SearchResults>>();
+
 export async function searchAll(query: string, limit = 40): Promise<SearchResults> {
   if (!query.trim()) return { tracks: [], artists: [], playlists: [] };
   const key = `all:${limit}:${query.toLowerCase()}`;
   const cached = cacheGet(key);
   if (cached) return cached;
-  const yt = await youtubeSearchAll(query, limit);
-  if (yt.tracks.length > 0) { cacheSet(key, yt); return yt; }
-  // Fallback to Audius (tracks only)
-  const au = await audiusFetch(
-    `/v1/tracks/search?query=${encodeURIComponent(query)}&limit=${limit}`,
-  );
-  if (au.length > 0) {
-    const data = { tracks: au.map(mapAudius), artists: [], playlists: [] };
-    cacheSet(key, data);
-    return data;
-  }
-  throw new Error("Music service is unreachable. Please try again.");
+  const existing = inflight.get(key);
+  if (existing) return existing;
+  const p = (async () => {
+    const yt = await youtubeSearchAll(query, limit);
+    if (yt.tracks.length > 0) { cacheSet(key, yt); return yt; }
+    const au = await audiusFetch(
+      `/v1/tracks/search?query=${encodeURIComponent(query)}&limit=${limit}`,
+    );
+    if (au.length > 0) {
+      const data = { tracks: au.map(mapAudius), artists: [], playlists: [] };
+      cacheSet(key, data);
+      return data;
+    }
+    throw new Error("Music service is unreachable. Please try again.");
+  })();
+  inflight.set(key, p);
+  try { return await p; } finally { inflight.delete(key); }
 }
 
 // Paginated search for infinite-scroll. Since the YouTube scrape gives us
