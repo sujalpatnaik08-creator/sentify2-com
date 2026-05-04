@@ -311,14 +311,14 @@ export const TopBar = () => {
                       type="button"
                       onMouseDown={(e) => { e.preventDefault(); pickSuggestion(s); }}
                       onMouseEnter={() => setActiveIdx(i)}
-                      className={`w-full text-left px-4 py-2 text-sm flex items-center gap-3 transition-colors ${activeIdx === i ? "bg-accent text-accent-foreground" : "hover:bg-accent/60"}`}
+                      className={`w-full text-left px-4 py-3 text-base font-medium flex items-center gap-3 transition-colors ${activeIdx === i ? "bg-accent text-accent-foreground" : "hover:bg-accent/60"}`}
                     >
                       {isHist ? (
                         <History className="w-4 h-4 text-muted-foreground shrink-0" />
                       ) : (
                         <SearchIcon className="w-4 h-4 text-muted-foreground shrink-0" />
                       )}
-                      <span className="truncate">{s}</span>
+                      <span className="truncate">{s.split(/[-–—]|by\s+/i)[0].trim() || s}</span>
                     </button>
                   </li>
                 );
