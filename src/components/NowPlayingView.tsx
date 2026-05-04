@@ -51,6 +51,7 @@ import { getArtistInfo, type ArtistInfo } from "@/lib/artist-info";
 import { parseSongDNA } from "@/lib/song-dna";
 import { supabase } from "@/integrations/supabase/client";
 import { QueuePanel } from "@/components/QueuePanel";
+import { getDefaultLyricsLang, getAlwaysTranslate, setDefaultLyricsLang, setAlwaysTranslate } from "@/lib/user-prefs";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -142,7 +143,9 @@ export const NowPlayingView = ({ open, onOpenChange }: Props) => {
     setSynced(null);
     setTranslatedPlain(null);
     setTranslatedSynced(null);
-    setTargetLang("off");
+    // Restore the user's preferred default translation language (mandatory option).
+    const defaultLang = getAlwaysTranslate() ? getDefaultLyricsLang() : "off";
+    setTargetLang(defaultLang);
     setTranslatingLang(null);
     translationCacheRef.current = new Map();
     translateReqIdRef.current++;
@@ -157,6 +160,10 @@ export const NowPlayingView = ({ open, onOpenChange }: Props) => {
         setSynced(res.synced);
         if ((res.synced && res.synced.length > 0) || res.plain) {
           setLyricsStatus("ready");
+          // Auto-translate when "Always translate" is enabled.
+          if (defaultLang !== "off") {
+            void runTranslate(defaultLang);
+          }
         } else {
           setLyricsStatus("none");
         }
