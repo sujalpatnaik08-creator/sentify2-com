@@ -29,6 +29,7 @@ import {
   Smartphone,
   Sparkles,
   Sun,
+  KeyRound,
   Volume2,
   Waves,
   X,
@@ -254,6 +255,41 @@ const SectionPanel = ({
   const [usernameDraft, setUsernameDraft] = useState(initialUsername);
   const [editingUsername, setEditingUsername] = useState(false);
   const [savingUsername, setSavingUsername] = useState(false);
+
+  // Change-password (signed-in user). Requires current password to re-auth,
+  // then updates and triggers Supabase's password-changed email notification.
+  const [pwOpen, setPwOpen] = useState(false);
+  const [pwCurrent, setPwCurrent] = useState("");
+  const [pwNext, setPwNext] = useState("");
+  const [pwBusy, setPwBusy] = useState(false);
+  const changePassword = async () => {
+    if (!user?.email) return;
+    if (pwNext.length < 6) { toast.error("New password must be 6+ characters"); return; }
+    setPwBusy(true);
+    const { error: signInErr } = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password: pwCurrent,
+    });
+    if (signInErr) {
+      setPwBusy(false);
+      toast.error("Current password is incorrect");
+      return;
+    }
+    const { error } = await supabase.auth.updateUser({ password: pwNext });
+    setPwBusy(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Password changed. A confirmation email has been sent.");
+    setPwCurrent(""); setPwNext(""); setPwOpen(false);
+  };
+
+  const sendResetLink = async () => {
+    if (!user?.email) return;
+    const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    if (error) toast.error(error.message);
+    else toast.success(`Reset link sent to ${user.email}`);
+  };
 
   useEffect(() => {
     setUsernameDraft(initialUsername);
