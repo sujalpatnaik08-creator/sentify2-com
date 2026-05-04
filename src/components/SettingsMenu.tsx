@@ -399,6 +399,60 @@ const SectionPanel = ({
               >
                 Downloads
               </Button>
+              {/* Password security */}
+              <div className="pt-3 mt-2 border-t border-border/40">
+                <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
+                  Password & security
+                </p>
+                {!pwOpen ? (
+                  <div className="space-y-1">
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start h-10"
+                      onClick={() => setPwOpen(true)}
+                    >
+                      <KeyRound className="w-4 h-4 mr-2" /> Change password
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start h-10"
+                      onClick={sendResetLink}
+                    >
+                      Send reset link to email
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-2 p-2 rounded-lg bg-card/40 border border-border/40">
+                    <Input
+                      type="password"
+                      placeholder="Current password"
+                      value={pwCurrent}
+                      onChange={(e) => setPwCurrent(e.target.value)}
+                      className="h-9"
+                      autoComplete="current-password"
+                    />
+                    <Input
+                      type="password"
+                      placeholder="New password (6+ chars)"
+                      value={pwNext}
+                      onChange={(e) => setPwNext(e.target.value)}
+                      className="h-9"
+                      autoComplete="new-password"
+                    />
+                    <div className="flex gap-2">
+                      <Button size="sm" className="flex-1" onClick={changePassword} disabled={pwBusy}>
+                        {pwBusy ? "Updating…" : "Update password"}
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => { setPwOpen(false); setPwCurrent(""); setPwNext(""); }}>
+                        Cancel
+                      </Button>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      A confirmation email is sent to {user.email} when your password changes.
+                    </p>
+                  </div>
+                )}
+              </div>
               <Button
                 variant="ghost"
                 className="w-full justify-start h-10 text-destructive hover:text-destructive"
