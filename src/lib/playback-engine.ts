@@ -232,13 +232,26 @@ class PlaybackEngine {
       navigator.mediaSession.metadata = new MediaMetadata({
         title: track.title,
         artist: track.artist,
-        album: track.artist,
+        album: track.album || track.artist,
         artwork: track.artwork ? [
           { src: track.artwork, sizes: "96x96", type: "image/jpeg" },
+          { src: track.artwork, sizes: "192x192", type: "image/jpeg" },
           { src: track.artwork, sizes: "256x256", type: "image/jpeg" },
+          { src: track.artwork, sizes: "384x384", type: "image/jpeg" },
           { src: track.artwork, sizes: "512x512", type: "image/jpeg" },
         ] : [],
       });
+      // Position state lets the OS show an accurate scrubber on lock screens.
+      const dur = usePlayerStore.getState().duration;
+      if (dur && isFinite(dur) && dur > 0 && "setPositionState" in navigator.mediaSession) {
+        try {
+          navigator.mediaSession.setPositionState({
+            duration: dur,
+            position: Math.min(usePlayerStore.getState().progress, dur),
+            playbackRate: 1,
+          });
+        } catch { /* */ }
+      }
     } catch { /* */ }
   }
 
@@ -455,9 +468,33 @@ class PlaybackEngine {
 
   // ------- Main monitor loop (4Hz) -------
   // Drives: progress sync, normalization peak learning, prebuffer arming,
-  // crossfade scheduling.
+  // crossfade scheduling, and Spotify-style "Up Next" auto-queue.
   private startMonitor() {
     this.tickHandle = window.setInterval(() => this.tick(), 250);
+  }
+
+  private autoQueueInflight = false;
+  private async maybeAutoQueue() {
+    const s = usePlayerStore.getState();
+    if (!s.autoplayContinuity || !s.current) return;
+    if (s.queue.length >= 3) return;
+    if (this.autoQueueInflight) return;
+    this.autoQueueInflight = true;
+    try {
+      const seed = s.current;
+      const recs = await searchTracks(`${seed.artist} similar songs`, 10);
+      const seen = new Set<string>([
+        seed.id,
+        ...usePlayerStore.getState().queue.map((t) => t.id),
+        ...usePlayerStore.getState().history.map((t) => t.id),
+      ]);
+      const fresh = recs.filter((t) => !seen.has(t.id)).slice(0, 8);
+      if (fresh.length > 0) {
+        const cur = usePlayerStore.getState();
+        cur._setQueue([...cur.queue, ...fresh]);
+      }
+    } catch { /* */ }
+    finally { this.autoQueueInflight = false; }
   }
 
   private tick() {
@@ -492,6 +529,12 @@ class PlaybackEngine {
       if (xfade > 0 && remaining <= xfade && remaining > 0.1 && !this.crossfadeArmed) {
         this.armCrossfade(xfade);
       }
+
+      // Auto-queue when we get low on upcoming tracks
+      if (s.queue.length < 2) void this.maybeAutoQueue();
+    } else if (cur.source === "youtube") {
+      // YT: fire auto-queue periodically too so the queue stays warm.
+      if (s.queue.length < 2) void this.maybeAutoQueue();
     }
   }
 
