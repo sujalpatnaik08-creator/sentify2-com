@@ -70,6 +70,10 @@ export const LyricsPanel = ({ onClose }: { onClose: () => void }) => {
 
   const activeLineRef = useRef<HTMLDivElement | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement | null>(null);
+  // Monotonic ids — drop stale fetch / translate responses when the user
+  // switches songs quickly (e.g. clicking through search results).
+  const lyricsReqIdRef = useRef(0);
+  const translateReqIdRef = useRef(0);
 
   // Fetch lyrics when track changes
   useEffect(() => {
@@ -79,7 +83,10 @@ export const LyricsPanel = ({ onClose }: { onClose: () => void }) => {
       setStatus("idle");
       return;
     }
-    let cancelled = false;
+    const reqId = ++lyricsReqIdRef.current;
+    // Bump translate id too so any in-flight translation for the previous
+    // track can no longer overwrite the new track's state.
+    translateReqIdRef.current++;
     setStatus("loading");
     setPlain(null);
     setSynced(null);
@@ -87,7 +94,7 @@ export const LyricsPanel = ({ onClose }: { onClose: () => void }) => {
     setTranslatedSynced(null);
     fetchLyrics(current.artist, current.title, duration || current.duration)
       .then((res) => {
-        if (cancelled) return;
+        if (reqId !== lyricsReqIdRef.current) return;
         setPlain(res.plain);
         setSynced(res.synced);
         if (res.synced && res.synced.length > 0) {
@@ -101,11 +108,8 @@ export const LyricsPanel = ({ onClose }: { onClose: () => void }) => {
         }
       })
       .catch(() => {
-        if (!cancelled) setStatus("error");
+        if (reqId === lyricsReqIdRef.current) setStatus("error");
       });
-    return () => {
-      cancelled = true;
-    };
   }, [current, duration]);
 
   // Source lines (for active highlighting + click-to-seek)
