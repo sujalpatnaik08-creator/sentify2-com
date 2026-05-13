@@ -31,9 +31,11 @@ import {
   searchPage,
   detectLanguage,
   fetchLyrics,
+  getSearchStats,
   type ArtistResult,
   type PlaylistResult,
   type Language,
+  type SearchStats,
 } from "@/lib/music-api";
 import type { Track } from "@/types/music";
 import { usePlayer } from "@/contexts/PlayerContext";
