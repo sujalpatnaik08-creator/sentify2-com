@@ -2,8 +2,12 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- Strict CSP: only trusted CDNs/APIs are allowed; YouTube embeds restricted to nocookie domain. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- Security: tight referrer + permissions policy. CSP locks scripts to known
+         CDNs, forbids plugins/embedding, and restricts media to self/blob/https. -->
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta http-equiv="Permissions-Policy" content="camera=(), geolocation=(), microphone=(self), payment=(), usb=(), interest-cohort=()" />
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
     <meta
       http-equiv="Content-Security-Policy"
       content="default-src 'self';
@@ -14,9 +18,12 @@
         media-src 'self' blob: https:;
         connect-src 'self' https: wss:;
         frame-src https://www.youtube.com https://www.youtube-nocookie.com;
+        frame-ancestors 'none';
+        worker-src 'self' blob:;
         object-src 'none';
         base-uri 'self';
-        form-action 'self';" />
+        form-action 'self';
+        upgrade-insecure-requests;" />
     <title>Sentify — Music for Every Mood</title>
     <meta name="description" content="Sentify is a free, ad-free music streaming web player with mood-based discovery, lyrics, search, and full-length playback." />
     <meta name="author" content="Sentify" />
