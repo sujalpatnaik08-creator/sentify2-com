@@ -674,4 +674,15 @@ export async function fetchLyrics(
   }
 
   return { plain: null, synced: null };
+  })();
+
+  lyricsInflight.set(cacheKey, run);
+  try {
+    const result = await run;
+    // Only cache positive results — keep retrying on transient failures.
+    if (result.synced || result.plain) lyricsCache.set(cacheKey, result);
+    return result;
+  } finally {
+    lyricsInflight.delete(cacheKey);
+  }
 }
