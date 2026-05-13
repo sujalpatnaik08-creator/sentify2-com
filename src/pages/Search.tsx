@@ -389,6 +389,47 @@ const Search = () => {
     else playTrack(t, filteredTracks);
   };
 
+  // ---- Keyboard navigation on the results page ----
+  // ArrowDown/ArrowUp move the highlight cursor across track rows.
+  // Enter plays the highlighted (or first) track. Esc clears the query.
+  // Skip if the user is typing in an input/textarea/contenteditable so we
+  // don't hijack the search bar's own keys.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      const isTyping =
+        tag === "INPUT" ||
+        tag === "TEXTAREA" ||
+        tag === "SELECT" ||
+        target?.isContentEditable;
+      if (e.key === "Escape") {
+        if (q) {
+          e.preventDefault();
+          navigate("/search", { replace: true });
+        }
+        return;
+      }
+      if (isTyping) return;
+      if (filteredTracks.length === 0) return;
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setCursorIdx((i) => Math.min(filteredTracks.length - 1, i < 0 ? 0 : i + 1));
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setCursorIdx((i) => Math.max(0, (i < 0 ? 0 : i - 1)));
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        const idx = cursorIdx >= 0 ? cursorIdx : 0;
+        const t = filteredTracks[idx];
+        if (t) handleRowPlay(t);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredTracks, cursorIdx, q]);
+
   const goToArtist = (a: ArtistResult) => {
     const params = new URLSearchParams({ name: a.name, thumb: a.thumbnail });
     navigate(`/artist/${encodeURIComponent(a.id || a.name)}?${params.toString()}`);
