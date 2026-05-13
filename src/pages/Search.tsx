@@ -803,6 +803,21 @@ const Search = () => {
             <DebugStat icon={<User className="w-3.5 h-3.5 text-foreground" />} label="Artists" value={artists.length} />
             <DebugStat icon={<ListMusic className="w-3.5 h-3.5 text-muted-foreground" />} label="Playlists" value={playlists.length} />
           </div>
+          {/* Live search performance — debounce, cache, in-flight, latency. */}
+          <div className="pt-2 mt-2 border-t border-border/50">
+            <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5">
+              Search performance
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <DebugStat icon={<Clock className="w-3.5 h-3.5 text-primary" />} label="Debounce" value={`${DEBOUNCE_MS}ms`} />
+              <DebugStat icon={<CheckCircle2 className="w-3.5 h-3.5 text-primary" />} label="Cache hit rate" value={`${Math.round(stats.hitRate * 100)}%`} />
+              <DebugStat icon={<Loader2 className={cn("w-3.5 h-3.5", stats.inflight > 0 && "animate-spin text-primary")} />} label="In-flight" value={stats.inflight} />
+              <DebugStat icon={<Bug className="w-3.5 h-3.5 text-foreground" />} label="Last latency" value={`${stats.lastLatencyMs || lastDuration}ms`} />
+            </div>
+            <div className="mt-1.5 text-[10px] text-muted-foreground tabular-nums">
+              hits {stats.cacheHits} · misses {stats.cacheMisses} · dedup {stats.dedupHits} · cache size {stats.cacheSize}
+            </div>
+          </div>
           <div className="pt-1 flex items-center gap-2 text-muted-foreground">
             <CheckCircle2 className={cn("w-3.5 h-3.5", error ? "text-destructive" : "text-primary")} />
             <span>
