@@ -114,6 +114,9 @@ const Search = () => {
   const [liked, setLiked] = useState<Set<string>>(initialLikedSet);
   const [showDebug, setShowDebug] = useState(false);
   const [lastDuration, setLastDuration] = useState<number>(0);
+  const [cursorIdx, setCursorIdx] = useState<number>(-1);
+  const DEBOUNCE_MS = 140;
+  const [stats, setStats] = useState<SearchStats>(() => getSearchStats());
 
   // Keep tab + URL ?type= in sync (Spotify-style shareable filter URLs).
   const setTab = useCallback((next: Tab) => {
