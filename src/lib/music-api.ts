@@ -580,11 +580,27 @@ const parseLrc = (lrc: string): LyricLine[] => {
   return lines.sort((a, b) => a.time - b.time);
 };
 
+// Per-session lyrics caches. Prevents:
+//  - duplicate network round-trips when re-opening the same track
+//  - stale responses from a previous track overwriting a newer one when the
+//    user rapidly switches songs from search results.
+const lyricsCache = new Map<string, LyricsResult>();
+const lyricsInflight = new Map<string, Promise<LyricsResult>>();
+const lyricsKey = (artist: string, title: string, duration?: number) =>
+  `${artist.toLowerCase().trim()}|${title.toLowerCase().trim()}|${duration ? Math.round(duration) : 0}`;
+
 export async function fetchLyrics(
   artist: string,
   title: string,
   duration?: number,
 ): Promise<LyricsResult> {
+  const cacheKey = lyricsKey(artist, title, duration);
+  const cached = lyricsCache.get(cacheKey);
+  if (cached) return cached;
+  const inflight = lyricsInflight.get(cacheKey);
+  if (inflight) return inflight;
+
+  const run = (async (): Promise<LyricsResult> => {
   // Clean YouTube-style titles like "Song Name (Official Video) [HD]"
   const cleanTitle = title
     .replace(/\([^)]*\)/g, "")
@@ -658,4 +674,15 @@ export async function fetchLyrics(
   }
 
   return { plain: null, synced: null };
+  })();
+
+  lyricsInflight.set(cacheKey, run);
+  try {
+    const result = await run;
+    // Only cache positive results — keep retrying on transient failures.
+    if (result.synced || result.plain) lyricsCache.set(cacheKey, result);
+    return result;
+  } finally {
+    lyricsInflight.delete(cacheKey);
+  }
 }

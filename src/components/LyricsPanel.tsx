@@ -37,19 +37,33 @@ const TRANSLATE_LANGS: { code: string; label: string }[] = [
   { code: "Marathi", label: "Marathi (मराठी)" },
   { code: "Punjabi", label: "Punjabi (ਪੰਜਾਬੀ)" },
   { code: "Gujarati", label: "Gujarati (ગુજરાતી)" },
+  { code: "Kannada", label: "Kannada (ಕನ್ನಡ)" },
+  { code: "Malayalam", label: "Malayalam (മലയാളം)" },
   { code: "Urdu", label: "Urdu (اردو)" },
+  { code: "Nepali", label: "Nepali (नेपाली)" },
   { code: "Spanish", label: "Spanish (Español)" },
   { code: "French", label: "French (Français)" },
   { code: "German", label: "German (Deutsch)" },
-  { code: "Portuguese", label: "Portuguese" },
+  { code: "Portuguese", label: "Portuguese (Português)" },
   { code: "Italian", label: "Italian (Italiano)" },
+  { code: "Dutch", label: "Dutch (Nederlands)" },
   { code: "Russian", label: "Russian (Русский)" },
+  { code: "Ukrainian", label: "Ukrainian (Українська)" },
+  { code: "Polish", label: "Polish (Polski)" },
+  { code: "Turkish", label: "Turkish (Türkçe)" },
   { code: "Arabic", label: "Arabic (العربية)" },
+  { code: "Persian", label: "Persian (فارسی)" },
+  { code: "Hebrew", label: "Hebrew (עברית)" },
   { code: "Japanese", label: "Japanese (日本語)" },
   { code: "Korean", label: "Korean (한국어)" },
   { code: "Chinese", label: "Chinese (中文)" },
-  { code: "Indonesian", label: "Indonesian" },
-  { code: "Turkish", label: "Turkish" },
+  { code: "Thai", label: "Thai (ไทย)" },
+  { code: "Vietnamese", label: "Vietnamese (Tiếng Việt)" },
+  { code: "Indonesian", label: "Indonesian (Bahasa Indonesia)" },
+  { code: "Malay", label: "Malay (Bahasa Melayu)" },
+  { code: "Filipino", label: "Filipino (Tagalog)" },
+  { code: "Swahili", label: "Swahili (Kiswahili)" },
+  { code: "Greek", label: "Greek (Ελληνικά)" },
 ];
 
 export const LyricsPanel = ({ onClose }: { onClose: () => void }) => {
@@ -70,6 +84,10 @@ export const LyricsPanel = ({ onClose }: { onClose: () => void }) => {
 
   const activeLineRef = useRef<HTMLDivElement | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement | null>(null);
+  // Monotonic ids — drop stale fetch / translate responses when the user
+  // switches songs quickly (e.g. clicking through search results).
+  const lyricsReqIdRef = useRef(0);
+  const translateReqIdRef = useRef(0);
 
   // Fetch lyrics when track changes
   useEffect(() => {
@@ -79,7 +97,10 @@ export const LyricsPanel = ({ onClose }: { onClose: () => void }) => {
       setStatus("idle");
       return;
     }
-    let cancelled = false;
+    const reqId = ++lyricsReqIdRef.current;
+    // Bump translate id too so any in-flight translation for the previous
+    // track can no longer overwrite the new track's state.
+    translateReqIdRef.current++;
     setStatus("loading");
     setPlain(null);
     setSynced(null);
@@ -87,7 +108,7 @@ export const LyricsPanel = ({ onClose }: { onClose: () => void }) => {
     setTranslatedSynced(null);
     fetchLyrics(current.artist, current.title, duration || current.duration)
       .then((res) => {
-        if (cancelled) return;
+        if (reqId !== lyricsReqIdRef.current) return;
         setPlain(res.plain);
         setSynced(res.synced);
         if (res.synced && res.synced.length > 0) {
@@ -101,11 +122,8 @@ export const LyricsPanel = ({ onClose }: { onClose: () => void }) => {
         }
       })
       .catch(() => {
-        if (!cancelled) setStatus("error");
+        if (reqId === lyricsReqIdRef.current) setStatus("error");
       });
-    return () => {
-      cancelled = true;
-    };
   }, [current, duration]);
 
   // Source lines (for active highlighting + click-to-seek)
@@ -157,6 +175,7 @@ export const LyricsPanel = ({ onClose }: { onClose: () => void }) => {
     }
     if (!hasOriginal) return;
 
+    const reqId = ++translateReqIdRef.current;
     setTranslating(true);
     try {
       // Translate synced (preserve timing) if available
@@ -167,6 +186,7 @@ export const LyricsPanel = ({ onClose }: { onClose: () => void }) => {
           { body: { text: joined, targetLanguage: lang, romanize: false } },
         );
         if (error) throw error;
+        if (reqId !== translateReqIdRef.current) return;
         const translated = (data as { translated?: string })?.translated ?? "";
         const lines = translated.split(/\r?\n/);
         const out: LyricLine[] = [];
@@ -181,10 +201,12 @@ export const LyricsPanel = ({ onClose }: { onClose: () => void }) => {
           { body: { text: plain, targetLanguage: lang, romanize: false } },
         );
         if (error) throw error;
+        if (reqId !== translateReqIdRef.current) return;
         const translated = (data as { translated?: string })?.translated ?? "";
         setTranslatedPlain(translated);
       }
     } catch (e: unknown) {
+      if (reqId !== translateReqIdRef.current) return;
       const msg =
         typeof e === "object" && e && "message" in e
           ? String((e as { message: unknown }).message)
@@ -193,7 +215,7 @@ export const LyricsPanel = ({ onClose }: { onClose: () => void }) => {
       setTranslatedPlain(null);
       setTranslatedSynced(null);
     } finally {
-      setTranslating(false);
+      if (reqId === translateReqIdRef.current) setTranslating(false);
     }
   };
 

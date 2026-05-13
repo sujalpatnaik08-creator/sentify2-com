@@ -62,18 +62,46 @@ const fmt = (s: number) => {
   return `${m}:${sec.toString().padStart(2, "0")}`;
 };
 
+// Full language list — kept in sync with the lyrics sidebar (LyricsPanel).
 const TRANSLATE_LANGS: { code: string; label: string }[] = [
   { code: "off", label: "Original" },
   { code: "English", label: "English" },
   { code: "Hindi", label: "Hindi (हिन्दी)" },
-  { code: "Hinglish", label: "Hinglish" },
-  { code: "Spanish", label: "Spanish" },
-  { code: "French", label: "French" },
-  { code: "German", label: "German" },
-  { code: "Portuguese", label: "Portuguese" },
-  { code: "Japanese", label: "Japanese" },
-  { code: "Korean", label: "Korean" },
-  { code: "Arabic", label: "Arabic" },
+  { code: "Hinglish", label: "Hinglish (Hindi in Roman)" },
+  { code: "Odia", label: "Odia (ଓଡ଼ିଆ)" },
+  { code: "Bengali", label: "Bengali (বাংলা)" },
+  { code: "Tamil", label: "Tamil (தமிழ்)" },
+  { code: "Telugu", label: "Telugu (తెలుగు)" },
+  { code: "Marathi", label: "Marathi (मराठी)" },
+  { code: "Punjabi", label: "Punjabi (ਪੰਜਾਬੀ)" },
+  { code: "Gujarati", label: "Gujarati (ગુજરાતી)" },
+  { code: "Kannada", label: "Kannada (ಕನ್ನಡ)" },
+  { code: "Malayalam", label: "Malayalam (മലയാളം)" },
+  { code: "Urdu", label: "Urdu (اردو)" },
+  { code: "Nepali", label: "Nepali (नेपाली)" },
+  { code: "Spanish", label: "Spanish (Español)" },
+  { code: "French", label: "French (Français)" },
+  { code: "German", label: "German (Deutsch)" },
+  { code: "Portuguese", label: "Portuguese (Português)" },
+  { code: "Italian", label: "Italian (Italiano)" },
+  { code: "Dutch", label: "Dutch (Nederlands)" },
+  { code: "Russian", label: "Russian (Русский)" },
+  { code: "Ukrainian", label: "Ukrainian (Українська)" },
+  { code: "Polish", label: "Polish (Polski)" },
+  { code: "Turkish", label: "Turkish (Türkçe)" },
+  { code: "Arabic", label: "Arabic (العربية)" },
+  { code: "Persian", label: "Persian (فارسی)" },
+  { code: "Hebrew", label: "Hebrew (עברית)" },
+  { code: "Japanese", label: "Japanese (日本語)" },
+  { code: "Korean", label: "Korean (한국어)" },
+  { code: "Chinese", label: "Chinese (中文)" },
+  { code: "Thai", label: "Thai (ไทย)" },
+  { code: "Vietnamese", label: "Vietnamese (Tiếng Việt)" },
+  { code: "Indonesian", label: "Indonesian (Bahasa Indonesia)" },
+  { code: "Malay", label: "Malay (Bahasa Melayu)" },
+  { code: "Filipino", label: "Filipino (Tagalog)" },
+  { code: "Swahili", label: "Swahili (Kiswahili)" },
+  { code: "Greek", label: "Greek (Ελληνικά)" },
 ];
 
 interface Props {
@@ -124,6 +152,10 @@ export const NowPlayingView = ({ open, onOpenChange }: Props) => {
   >(new Map());
   // Monotonic request id so out-of-order responses can't overwrite newer ones.
   const translateReqIdRef = useRef(0);
+  // Separate id for the lyrics fetch — when the user rapidly switches songs
+  // from search results, slow responses for the previous track must NOT
+  // overwrite the lyrics already loaded for the now-current track.
+  const lyricsReqIdRef = useRef(0);
   // Debounce timer for language switching.
   const langDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -137,7 +169,7 @@ export const NowPlayingView = ({ open, onOpenChange }: Props) => {
   // ---- Fetch lyrics whenever the track changes (and the dialog is open) ----
   useEffect(() => {
     if (!open || !current) return;
-    let cancelled = false;
+    const reqId = ++lyricsReqIdRef.current;
     setLyricsStatus("loading");
     setPlain(null);
     setSynced(null);
@@ -148,6 +180,8 @@ export const NowPlayingView = ({ open, onOpenChange }: Props) => {
     setTargetLang(defaultLang);
     setTranslatingLang(null);
     translationCacheRef.current = new Map();
+    // Bump translate id too so any in-flight translation for the previous
+    // track is discarded the moment it returns.
     translateReqIdRef.current++;
     if (langDebounceRef.current) {
       clearTimeout(langDebounceRef.current);
@@ -155,7 +189,8 @@ export const NowPlayingView = ({ open, onOpenChange }: Props) => {
     }
     fetchLyrics(current.artist, current.title, duration || current.duration)
       .then((res) => {
-        if (cancelled) return;
+        // Drop stale lyrics from a previous (already-switched-away) track.
+        if (reqId !== lyricsReqIdRef.current) return;
         setPlain(res.plain);
         setSynced(res.synced);
         if ((res.synced && res.synced.length > 0) || res.plain) {
@@ -169,11 +204,9 @@ export const NowPlayingView = ({ open, onOpenChange }: Props) => {
         }
       })
       .catch(() => {
-        if (!cancelled) setLyricsStatus("error");
+        if (reqId !== lyricsReqIdRef.current) return;
+        setLyricsStatus("error");
       });
-    return () => {
-      cancelled = true;
-    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current?.id, open]);
 
