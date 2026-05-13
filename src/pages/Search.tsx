@@ -31,9 +31,11 @@ import {
   searchPage,
   detectLanguage,
   fetchLyrics,
+  getSearchStats,
   type ArtistResult,
   type PlaylistResult,
   type Language,
+  type SearchStats,
 } from "@/lib/music-api";
 import type { Track } from "@/types/music";
 import { usePlayer } from "@/contexts/PlayerContext";
@@ -112,6 +114,9 @@ const Search = () => {
   const [liked, setLiked] = useState<Set<string>>(initialLikedSet);
   const [showDebug, setShowDebug] = useState(false);
   const [lastDuration, setLastDuration] = useState<number>(0);
+  const [cursorIdx, setCursorIdx] = useState<number>(-1);
+  const DEBOUNCE_MS = 140;
+  const [stats, setStats] = useState<SearchStats>(() => getSearchStats());
 
   // Keep tab + URL ?type= in sync (Spotify-style shareable filter URLs).
   const setTab = useCallback((next: Tab) => {
@@ -181,9 +186,20 @@ const Search = () => {
 
   useEffect(() => {
     // Snappy debounce; cache + in-flight dedup make repeats instant.
-    const id = setTimeout(() => runSearch(q), 140);
+    const id = setTimeout(() => runSearch(q), DEBOUNCE_MS);
     return () => clearTimeout(id);
   }, [q, attempt, runSearch]);
+
+  // Reset highlighted-row cursor when the query/results change.
+  useEffect(() => { setCursorIdx(-1); }, [q]);
+
+  // Live stats refresh while the debug panel is open (cheap — module reads).
+  useEffect(() => {
+    if (!showDebug) return;
+    setStats(getSearchStats());
+    const id = setInterval(() => setStats(getSearchStats()), 500);
+    return () => clearInterval(id);
+  }, [showDebug, q, loading]);
 
   // ---------- Infinite scroll: load next page ----------
   const loadMore = useCallback(async () => {
@@ -373,6 +389,47 @@ const Search = () => {
     else playTrack(t, filteredTracks);
   };
 
+  // ---- Keyboard navigation on the results page ----
+  // ArrowDown/ArrowUp move the highlight cursor across track rows.
+  // Enter plays the highlighted (or first) track. Esc clears the query.
+  // Skip if the user is typing in an input/textarea/contenteditable so we
+  // don't hijack the search bar's own keys.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      const isTyping =
+        tag === "INPUT" ||
+        tag === "TEXTAREA" ||
+        tag === "SELECT" ||
+        target?.isContentEditable;
+      if (e.key === "Escape") {
+        if (q) {
+          e.preventDefault();
+          navigate("/search", { replace: true });
+        }
+        return;
+      }
+      if (isTyping) return;
+      if (filteredTracks.length === 0) return;
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setCursorIdx((i) => Math.min(filteredTracks.length - 1, i < 0 ? 0 : i + 1));
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setCursorIdx((i) => Math.max(0, (i < 0 ? 0 : i - 1)));
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        const idx = cursorIdx >= 0 ? cursorIdx : 0;
+        const t = filteredTracks[idx];
+        if (t) handleRowPlay(t);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredTracks, cursorIdx, q]);
+
   const goToArtist = (a: ArtistResult) => {
     const params = new URLSearchParams({ name: a.name, thumb: a.thumbnail });
     navigate(`/artist/${encodeURIComponent(a.id || a.name)}?${params.toString()}`);
@@ -404,14 +461,17 @@ const Search = () => {
             const lyricsState = lyricsCache[t.id];
             const dl = downloads.has(t.id);
             const isDownloadingNow = downloading.has(t.id);
+            const isCursor = list === filteredTracks && cursorIdx === i;
             return (
               <FragmentRow key={t.id}>
                 <tr
                   onDoubleClick={() => handleRowPlay(t)}
+                  onMouseEnter={() => { if (list === filteredTracks) setCursorIdx(i); }}
                   className={cn(
                     "group border-b border-border/20 hover:bg-card/60 transition-colors cursor-pointer",
                     isCurrent && "bg-primary/5",
                     isExpanded && "bg-card/40",
+                    isCursor && "ring-1 ring-primary/40 bg-primary/5",
                   )}
                 >
                   <td className="py-2 pl-3 pr-2 text-muted-foreground">
@@ -743,6 +803,21 @@ const Search = () => {
             <DebugStat icon={<User className="w-3.5 h-3.5 text-foreground" />} label="Artists" value={artists.length} />
             <DebugStat icon={<ListMusic className="w-3.5 h-3.5 text-muted-foreground" />} label="Playlists" value={playlists.length} />
           </div>
+          {/* Live search performance — debounce, cache, in-flight, latency. */}
+          <div className="pt-2 mt-2 border-t border-border/50">
+            <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5">
+              Search performance
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <DebugStat icon={<Clock className="w-3.5 h-3.5 text-primary" />} label="Debounce" value={`${DEBOUNCE_MS}ms`} />
+              <DebugStat icon={<CheckCircle2 className="w-3.5 h-3.5 text-primary" />} label="Cache hit rate" value={`${Math.round(stats.hitRate * 100)}%`} />
+              <DebugStat icon={<Loader2 className={cn("w-3.5 h-3.5", stats.inflight > 0 && "animate-spin text-primary")} />} label="In-flight" value={stats.inflight} />
+              <DebugStat icon={<Bug className="w-3.5 h-3.5 text-foreground" />} label="Last latency" value={`${stats.lastLatencyMs || lastDuration}ms`} />
+            </div>
+            <div className="mt-1.5 text-[10px] text-muted-foreground tabular-nums">
+              hits {stats.cacheHits} · misses {stats.cacheMisses} · dedup {stats.dedupHits} · cache size {stats.cacheSize}
+            </div>
+          </div>
           <div className="pt-1 flex items-center gap-2 text-muted-foreground">
             <CheckCircle2 className={cn("w-3.5 h-3.5", error ? "text-destructive" : "text-primary")} />
             <span>
@@ -1001,7 +1076,7 @@ const LyricsRow = ({
   );
 };
 
-const DebugStat = ({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) => (
+const DebugStat = ({ icon, label, value }: { icon: React.ReactNode; label: string; value: number | string }) => (
   <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-secondary/60 border border-border/50">
     {icon}
     <div className="min-w-0">
