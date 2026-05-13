@@ -186,9 +186,20 @@ const Search = () => {
 
   useEffect(() => {
     // Snappy debounce; cache + in-flight dedup make repeats instant.
-    const id = setTimeout(() => runSearch(q), 140);
+    const id = setTimeout(() => runSearch(q), DEBOUNCE_MS);
     return () => clearTimeout(id);
   }, [q, attempt, runSearch]);
+
+  // Reset highlighted-row cursor when the query/results change.
+  useEffect(() => { setCursorIdx(-1); }, [q]);
+
+  // Live stats refresh while the debug panel is open (cheap — module reads).
+  useEffect(() => {
+    if (!showDebug) return;
+    setStats(getSearchStats());
+    const id = setInterval(() => setStats(getSearchStats()), 500);
+    return () => clearInterval(id);
+  }, [showDebug, q, loading]);
 
   // ---------- Infinite scroll: load next page ----------
   const loadMore = useCallback(async () => {
