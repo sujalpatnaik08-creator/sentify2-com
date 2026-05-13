@@ -1076,7 +1076,7 @@ const LyricsRow = ({
   );
 };
 
-const DebugStat = ({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) => (
+const DebugStat = ({ icon, label, value }: { icon: React.ReactNode; label: string; value: number | string }) => (
   <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-secondary/60 border border-border/50">
     {icon}
     <div className="min-w-0">
