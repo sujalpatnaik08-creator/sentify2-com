@@ -152,6 +152,10 @@ export const NowPlayingView = ({ open, onOpenChange }: Props) => {
   >(new Map());
   // Monotonic request id so out-of-order responses can't overwrite newer ones.
   const translateReqIdRef = useRef(0);
+  // Separate id for the lyrics fetch — when the user rapidly switches songs
+  // from search results, slow responses for the previous track must NOT
+  // overwrite the lyrics already loaded for the now-current track.
+  const lyricsReqIdRef = useRef(0);
   // Debounce timer for language switching.
   const langDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -165,7 +169,7 @@ export const NowPlayingView = ({ open, onOpenChange }: Props) => {
   // ---- Fetch lyrics whenever the track changes (and the dialog is open) ----
   useEffect(() => {
     if (!open || !current) return;
-    let cancelled = false;
+    const reqId = ++lyricsReqIdRef.current;
     setLyricsStatus("loading");
     setPlain(null);
     setSynced(null);
@@ -176,6 +180,8 @@ export const NowPlayingView = ({ open, onOpenChange }: Props) => {
     setTargetLang(defaultLang);
     setTranslatingLang(null);
     translationCacheRef.current = new Map();
+    // Bump translate id too so any in-flight translation for the previous
+    // track is discarded the moment it returns.
     translateReqIdRef.current++;
     if (langDebounceRef.current) {
       clearTimeout(langDebounceRef.current);
@@ -183,7 +189,8 @@ export const NowPlayingView = ({ open, onOpenChange }: Props) => {
     }
     fetchLyrics(current.artist, current.title, duration || current.duration)
       .then((res) => {
-        if (cancelled) return;
+        // Drop stale lyrics from a previous (already-switched-away) track.
+        if (reqId !== lyricsReqIdRef.current) return;
         setPlain(res.plain);
         setSynced(res.synced);
         if ((res.synced && res.synced.length > 0) || res.plain) {
@@ -197,11 +204,9 @@ export const NowPlayingView = ({ open, onOpenChange }: Props) => {
         }
       })
       .catch(() => {
-        if (!cancelled) setLyricsStatus("error");
+        if (reqId !== lyricsReqIdRef.current) return;
+        setLyricsStatus("error");
       });
-    return () => {
-      cancelled = true;
-    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current?.id, open]);
 
