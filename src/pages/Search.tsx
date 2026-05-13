@@ -461,14 +461,17 @@ const Search = () => {
             const lyricsState = lyricsCache[t.id];
             const dl = downloads.has(t.id);
             const isDownloadingNow = downloading.has(t.id);
+            const isCursor = list === filteredTracks && cursorIdx === i;
             return (
               <FragmentRow key={t.id}>
                 <tr
                   onDoubleClick={() => handleRowPlay(t)}
+                  onMouseEnter={() => { if (list === filteredTracks) setCursorIdx(i); }}
                   className={cn(
                     "group border-b border-border/20 hover:bg-card/60 transition-colors cursor-pointer",
                     isCurrent && "bg-primary/5",
                     isExpanded && "bg-card/40",
+                    isCursor && "ring-1 ring-primary/40 bg-primary/5",
                   )}
                 >
                   <td className="py-2 pl-3 pr-2 text-muted-foreground">
