@@ -161,6 +161,7 @@ export const LyricsPanel = ({ onClose }: { onClose: () => void }) => {
     }
     if (!hasOriginal) return;
 
+    const reqId = ++translateReqIdRef.current;
     setTranslating(true);
     try {
       // Translate synced (preserve timing) if available
@@ -171,6 +172,7 @@ export const LyricsPanel = ({ onClose }: { onClose: () => void }) => {
           { body: { text: joined, targetLanguage: lang, romanize: false } },
         );
         if (error) throw error;
+        if (reqId !== translateReqIdRef.current) return;
         const translated = (data as { translated?: string })?.translated ?? "";
         const lines = translated.split(/\r?\n/);
         const out: LyricLine[] = [];
@@ -185,10 +187,12 @@ export const LyricsPanel = ({ onClose }: { onClose: () => void }) => {
           { body: { text: plain, targetLanguage: lang, romanize: false } },
         );
         if (error) throw error;
+        if (reqId !== translateReqIdRef.current) return;
         const translated = (data as { translated?: string })?.translated ?? "";
         setTranslatedPlain(translated);
       }
     } catch (e: unknown) {
+      if (reqId !== translateReqIdRef.current) return;
       const msg =
         typeof e === "object" && e && "message" in e
           ? String((e as { message: unknown }).message)
@@ -197,7 +201,7 @@ export const LyricsPanel = ({ onClose }: { onClose: () => void }) => {
       setTranslatedPlain(null);
       setTranslatedSynced(null);
     } finally {
-      setTranslating(false);
+      if (reqId === translateReqIdRef.current) setTranslating(false);
     }
   };
 
