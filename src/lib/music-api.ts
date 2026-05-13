@@ -487,13 +487,42 @@ const cacheSet = (k: string, data: SearchResults) => {
 // In-flight dedup so rapid keystrokes don't fan out duplicate requests.
 const inflight = new Map<string, Promise<SearchResults>>();
 
+// Performance counters surfaced in the Search debug panel.
+const _stats = { cacheHits: 0, cacheMisses: 0, dedupHits: 0, lastLatencyMs: 0 };
+export interface SearchStats {
+  cacheHits: number;
+  cacheMisses: number;
+  dedupHits: number;
+  inflight: number;
+  cacheSize: number;
+  hitRate: number; // 0..1
+  lastLatencyMs: number;
+}
+export const getSearchStats = (): SearchStats => {
+  const total = _stats.cacheHits + _stats.cacheMisses;
+  return {
+    cacheHits: _stats.cacheHits,
+    cacheMisses: _stats.cacheMisses,
+    dedupHits: _stats.dedupHits,
+    inflight: inflight.size,
+    cacheSize: searchCache.size,
+    hitRate: total > 0 ? _stats.cacheHits / total : 0,
+    lastLatencyMs: _stats.lastLatencyMs,
+  };
+};
+export const resetSearchStats = () => {
+  _stats.cacheHits = 0; _stats.cacheMisses = 0; _stats.dedupHits = 0; _stats.lastLatencyMs = 0;
+};
+
 export async function searchAll(query: string, limit = 40): Promise<SearchResults> {
   if (!query.trim()) return { tracks: [], artists: [], playlists: [] };
   const key = `all:${limit}:${query.toLowerCase()}`;
   const cached = cacheGet(key);
-  if (cached) return cached;
+  if (cached) { _stats.cacheHits++; _stats.lastLatencyMs = 0; return cached; }
+  _stats.cacheMisses++;
   const existing = inflight.get(key);
-  if (existing) return existing;
+  if (existing) { _stats.dedupHits++; return existing; }
+  const t0 = performance.now();
   const p = (async () => {
     const yt = await youtubeSearchAll(query, limit);
     if (yt.tracks.length > 0) { cacheSet(key, yt); return yt; }
@@ -508,7 +537,11 @@ export async function searchAll(query: string, limit = 40): Promise<SearchResult
     throw new Error("Music service is unreachable. Please try again.");
   })();
   inflight.set(key, p);
-  try { return await p; } finally { inflight.delete(key); }
+  try {
+    const r = await p;
+    _stats.lastLatencyMs = Math.round(performance.now() - t0);
+    return r;
+  } finally { inflight.delete(key); }
 }
 
 // Paginated search for infinite-scroll. Since the YouTube scrape gives us
