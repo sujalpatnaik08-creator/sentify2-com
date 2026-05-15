@@ -41,6 +41,10 @@ const ResetPassword = () => {
         <title>Reset Password — Sentify</title>
         <meta name="description" content="Reset your Sentify password securely. Enter your new password to regain access to your music library and account." />
         <link rel="canonical" href="/reset-password" />
+        <meta property="og:title" content="Reset Password — Sentify" />
+        <meta property="og:description" content="Securely reset your Sentify password and regain access to your account." />
+        <meta property="og:url" content="/reset-password" />
+        <meta property="og:type" content="website" />
       </Helmet>
       <div aria-hidden className="pointer-events-none absolute inset-0">
         <div className="absolute -top-32 -left-32 w-[28rem] h-[28rem] rounded-full bg-primary/30 blur-3xl" />

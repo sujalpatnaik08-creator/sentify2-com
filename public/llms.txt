@@ -1,0 +1,17 @@
+# Sentify
+
+> Free, ad-free music streaming web player with mood-based discovery, synced lyrics, smart queues, and full-length playback.
+
+Sentify is a web-based music player focused on a clean, ad-free listening experience. It supports mood-based discovery, instant search across songs and artists, synced lyrics with translation, offline downloads, and a personal library.
+
+## Pages
+
+- [Home](/): Mood-based discovery and featured music.
+- [Search](/search): Instant search for songs, artists, and albums.
+- [Library](/library): Liked songs, favorite artists, playlists, and search history.
+- [Downloads](/downloads): Offline music downloads and playback.
+- [Sign In](/auth): Account sign-in and password reset.
+
+## Optional
+
+- [Reset Password](/reset-password): Secure password reset flow.

@@ -15,6 +15,11 @@ const NotFound = () => {
         <title>Page Not Found — Sentify</title>
         <meta name="description" content="The page you're looking for doesn't exist. Return to Sentify's homepage to continue discovering ad-free music." />
         <link rel="canonical" href={location.pathname} />
+        <meta name="robots" content="noindex" />
+        <meta property="og:title" content="Page Not Found — Sentify" />
+        <meta property="og:description" content="This page doesn't exist on Sentify. Head back to the homepage to keep listening." />
+        <meta property="og:url" content={location.pathname} />
+        <meta property="og:type" content="website" />
       </Helmet>
       <div className="text-center">
         <h1 className="mb-4 text-4xl font-bold">404</h1>

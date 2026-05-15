@@ -71,6 +71,10 @@ const Home = () => {
         <title>Sentify — Free Ad-Free Music for Every Mood</title>
         <meta name="description" content="Stream full-length songs ad-free. Discover music by mood with synced lyrics, smart queues, and offline playback on Sentify." />
         <link rel="canonical" href="/" />
+        <meta property="og:title" content="Sentify — Free Ad-Free Music for Every Mood" />
+        <meta property="og:description" content="Stream full-length songs ad-free. Discover music by mood with synced lyrics and smart queues on Sentify." />
+        <meta property="og:url" content="/" />
+        <meta property="og:type" content="website" />
       </Helmet>
       <div className="relative">
         {/* === HERO ============================================================ */}

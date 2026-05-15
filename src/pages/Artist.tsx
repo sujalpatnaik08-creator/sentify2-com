@@ -99,9 +99,21 @@ const Artist = () => {
   return (
     <div>
       <Helmet>
-        <title>{displayName} — Artist on Sentify</title>
+        <title>{`${displayName} — Artist on Sentify`}</title>
         <meta name="description" content={`Listen to ${displayName}'s top tracks and albums on Sentify. Full-length, ad-free music streaming with synced lyrics.`} />
         <link rel="canonical" href={`/artist/${id}`} />
+        <meta property="og:title" content={`${displayName} — Artist on Sentify`} />
+        <meta property="og:description" content={`Top tracks and albums by ${displayName} — ad-free, full-length playback on Sentify.`} />
+        <meta property="og:url" content={`/artist/${id}`} />
+        <meta property="og:type" content="profile" />
+        {thumbnail ? <meta property="og:image" content={thumbnail} /> : null}
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "MusicGroup",
+          name: displayName,
+          url: `/artist/${id}`,
+          ...(thumbnail ? { image: thumbnail } : {}),
+        })}</script>
       </Helmet>
       {/* Header */}
       <section

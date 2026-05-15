@@ -772,6 +772,10 @@ const Search = () => {
         <title>Search Music &amp; Artists — Sentify</title>
         <meta name="description" content="Find your favorite songs, artists, and albums on Sentify. Instant search with mood filters and full-length playback." />
         <link rel="canonical" href="/search" />
+        <meta property="og:title" content="Search Music & Artists — Sentify" />
+        <meta property="og:description" content="Instant search across songs, artists, and albums with mood filters on Sentify." />
+        <meta property="og:url" content="/search" />
+        <meta property="og:type" content="website" />
       </Helmet>
       <div className="px-6 md:px-10 py-8 max-w-7xl mx-auto">
       {/* Header row with troubleshooting toggle */}

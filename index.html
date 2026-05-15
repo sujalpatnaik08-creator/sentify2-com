@@ -34,6 +34,30 @@
     <meta property="og:title" content="Sentify — Music for Every Mood" />
     <meta property="og:description" content="Free ad-free music with mood filters, lyrics, and full-length playback." />
     <meta property="og:type" content="website" />
+    <meta property="og:url" content="/" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "name": "Sentify",
+            "url": "/",
+            "description": "Free, ad-free music streaming with mood-based discovery, synced lyrics, and full-length playback.",
+            "potentialAction": {
+              "@type": "SearchAction",
+              "target": "/search?q={search_term_string}",
+              "query-input": "required name=search_term_string"
+            }
+          },
+          {
+            "@type": "Organization",
+            "name": "Sentify",
+            "url": "/"
+          }
+        ]
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
