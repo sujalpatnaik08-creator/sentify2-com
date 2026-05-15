@@ -83,6 +83,10 @@ const Auth = () => {
         <title>Sign In — Sentify</title>
         <meta name="description" content="Sign in to Sentify to access your personalized library, saved songs, and ad-free music streaming experience." />
         <link rel="canonical" href="/auth" />
+        <meta property="og:title" content="Sign In — Sentify" />
+        <meta property="og:description" content="Sign in to access your personalized library and ad-free music on Sentify." />
+        <meta property="og:url" content="/auth" />
+        <meta property="og:type" content="website" />
       </Helmet>
       {/* 3D animated gradient blobs */}
       <div aria-hidden className="pointer-events-none absolute inset-0">

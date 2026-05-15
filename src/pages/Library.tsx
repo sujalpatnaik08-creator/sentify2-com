@@ -93,6 +93,10 @@ const Library = () => {
         <title>Your Library — Saved Music on Sentify</title>
         <meta name="description" content="Access your liked songs, favorite artists, playlists, and search history. Build your personal music collection on Sentify." />
         <link rel="canonical" href="/library" />
+        <meta property="og:title" content="Your Library — Saved Music on Sentify" />
+        <meta property="og:description" content="Liked songs, favorite artists, playlists, and search history — your personal music collection." />
+        <meta property="og:url" content="/library" />
+        <meta property="og:type" content="website" />
       </Helmet>
       <h1 className="text-3xl md:text-4xl font-black mb-1">Your Library</h1>
       <p className="text-muted-foreground mb-6">

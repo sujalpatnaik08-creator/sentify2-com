@@ -73,6 +73,10 @@ const Downloads = () => {
         <title>Downloads — Offline Music on Sentify</title>
         <meta name="description" content="Manage your offline music downloads. Play saved tracks without an internet connection using Sentify's offline player." />
         <link rel="canonical" href="/downloads" />
+        <meta property="og:title" content="Downloads — Offline Music on Sentify" />
+        <meta property="og:description" content="Manage offline downloads and play saved tracks without internet on Sentify." />
+        <meta property="og:url" content="/downloads" />
+        <meta property="og:type" content="website" />
       </Helmet>
       <div className="flex items-start justify-between gap-4 flex-wrap mb-6">
         <div>
