@@ -965,6 +965,7 @@ const Search = () => {
         </div>
       )}
     </div>
+    </>
   );
 };
 
