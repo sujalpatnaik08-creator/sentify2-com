@@ -98,6 +98,11 @@ const Artist = () => {
 
   return (
     <div>
+      <Helmet>
+        <title>{displayName} — Artist on Sentify</title>
+        <meta name="description" content={`Listen to ${displayName}'s top tracks and albums on Sentify. Full-length, ad-free music streaming with synced lyrics.`} />
+        <link rel="canonical" href={`/artist/${id}`} />
+      </Helmet>
       {/* Header */}
       <section
         className="relative overflow-hidden"

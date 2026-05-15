@@ -37,6 +37,11 @@ const ResetPassword = () => {
 
   return (
     <div className="relative min-h-screen flex items-center justify-center p-6 bg-background overflow-hidden">
+      <Helmet>
+        <title>Reset Password — Sentify</title>
+        <meta name="description" content="Reset your Sentify password securely. Enter your new password to regain access to your music library and account." />
+        <link rel="canonical" href="/reset-password" />
+      </Helmet>
       <div aria-hidden className="pointer-events-none absolute inset-0">
         <div className="absolute -top-32 -left-32 w-[28rem] h-[28rem] rounded-full bg-primary/30 blur-3xl" />
         <div className="absolute -bottom-32 -right-32 w-[32rem] h-[32rem] rounded-full bg-fuchsia-500/20 blur-3xl" />
