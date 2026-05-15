@@ -1080,6 +1080,7 @@ const LyricsRow = ({
         </div>
       )}
     </div>
+    </>
   );
 };
 
