@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import {
   Search as SearchIcon,
   Loader2,
@@ -766,7 +767,13 @@ const Search = () => {
   const currentSource = current?.source ?? null;
 
   return (
-    <div className="px-6 md:px-10 py-8 max-w-7xl mx-auto">
+    <>
+      <Helmet>
+        <title>Search Music &amp; Artists — Sentify</title>
+        <meta name="description" content="Find your favorite songs, artists, and albums on Sentify. Instant search with mood filters and full-length playback." />
+        <link rel="canonical" href="/search" />
+      </Helmet>
+      <div className="px-6 md:px-10 py-8 max-w-7xl mx-auto">
       {/* Header row with troubleshooting toggle */}
       {q && (
         <div className="flex items-center justify-between gap-3 mb-3">

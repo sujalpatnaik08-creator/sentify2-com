@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { ChevronLeft, ChevronRight, Play, Headphones, Sparkles } from "lucide-react";
 import { MoodFilter } from "@/components/MoodFilter";
 import { HumToSearch } from "@/components/HumToSearch";
@@ -65,8 +66,14 @@ const Home = () => {
   const current = HERO_SLIDES[slide];
 
   return (
-    <div className="relative">
-      {/* === HERO ============================================================ */}
+    <>
+      <Helmet>
+        <title>Sentify — Free Ad-Free Music for Every Mood</title>
+        <meta name="description" content="Stream full-length songs ad-free. Discover music by mood with synced lyrics, smart queues, and offline playback on Sentify." />
+        <link rel="canonical" href="/" />
+      </Helmet>
+      <div className="relative">
+        {/* === HERO ============================================================ */}
       <section className="relative overflow-hidden h-[70vh] min-h-[480px] max-h-[760px]">
         {/* Background image */}
         <img
