@@ -5,6 +5,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { Loader2, Play, Pause, UserPlus, UserMinus, ArrowLeft, Disc3 } from "lucide-react";
 import { searchAll } from "@/lib/music-api";
 import type { Track } from "@/types/music";

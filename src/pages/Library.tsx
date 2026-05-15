@@ -89,6 +89,11 @@ const Library = () => {
 
   return (
     <div className="px-6 md:px-10 py-8 max-w-7xl mx-auto">
+      <Helmet>
+        <title>Your Library — Saved Music on Sentify</title>
+        <meta name="description" content="Access your liked songs, favorite artists, playlists, and search history. Build your personal music collection on Sentify." />
+        <link rel="canonical" href="/library" />
+      </Helmet>
       <h1 className="text-3xl md:text-4xl font-black mb-1">Your Library</h1>
       <p className="text-muted-foreground mb-6">
         Saved songs, your favorite artists, and your search history — all in one place.
