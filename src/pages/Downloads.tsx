@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { Download, Trash2, Play, Pause, WifiOff, HardDrive, Search } from "lucide-react";
 import {
   listDownloads,
@@ -68,6 +69,11 @@ const Downloads = () => {
 
   return (
     <div className="px-6 md:px-10 py-8 max-w-7xl mx-auto">
+      <Helmet>
+        <title>Downloads — Offline Music on Sentify</title>
+        <meta name="description" content="Manage your offline music downloads. Play saved tracks without an internet connection using Sentify's offline player." />
+        <link rel="canonical" href="/downloads" />
+      </Helmet>
       <div className="flex items-start justify-between gap-4 flex-wrap mb-6">
         <div>
           <h1 className="text-3xl md:text-4xl font-black mb-1 flex items-center gap-3">

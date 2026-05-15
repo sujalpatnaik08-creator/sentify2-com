@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
@@ -78,6 +79,11 @@ const Auth = () => {
 
   return (
     <div className="relative min-h-screen flex items-center justify-center p-6 bg-background overflow-hidden">
+      <Helmet>
+        <title>Sign In — Sentify</title>
+        <meta name="description" content="Sign in to Sentify to access your personalized library, saved songs, and ad-free music streaming experience." />
+        <link rel="canonical" href="/auth" />
+      </Helmet>
       {/* 3D animated gradient blobs */}
       <div aria-hidden className="pointer-events-none absolute inset-0">
         <div className="absolute -top-32 -left-32 w-[28rem] h-[28rem] rounded-full bg-primary/30 blur-3xl animate-[pulse_6s_ease-in-out_infinite]" />
