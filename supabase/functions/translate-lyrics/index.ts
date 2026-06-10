@@ -20,9 +20,49 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
   try {
+    // Require an authenticated user — guards the paid Lovable AI Gateway
+    // credits from anonymous abuse.
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const jwt = authHeader.toLowerCase().startsWith("bearer ")
+      ? authHeader.slice(7).trim()
+      : "";
+    if (!jwt) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    try {
+      const { createClient } = await import(
+        "https://esm.sh/@supabase/supabase-js@2.45.0"
+      );
+      const supa = createClient(
+        Deno.env.get("SUPABASE_URL") ?? "",
+        Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+        { global: { headers: { Authorization: `Bearer ${jwt}` } } },
+      );
+      const { data: { user }, error: authErr } = await supa.auth.getUser(jwt);
+      if (authErr || !user) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    } catch {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { text, targetLanguage, romanize } = (await req.json()) as Body;
 
     if (!text || typeof text !== "string") {
+      return new Response(JSON.stringify({ error: "Missing 'text'" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
       return new Response(JSON.stringify({ error: "Missing 'text'" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
