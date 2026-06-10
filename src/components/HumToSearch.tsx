@@ -74,6 +74,7 @@ export const HumToSearch = () => {
       }
       ctx.stroke();
       setLevel(peak);
+      if (peak > chunkPeakRef.current) chunkPeakRef.current = peak;
       rafRef.current = requestAnimationFrame(tick);
     };
     tick();
