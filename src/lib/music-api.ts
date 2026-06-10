@@ -162,6 +162,13 @@ const relevanceScore = (q: string, v: YtVideo): number => {
     if (taste.has(artist)) r += 2.5;
     else for (const a of taste) { if (a && (artist.includes(a) || a.includes(artist))) { r += 1.2; break; } }
   }
+  // Thumbs up/down feedback (strongest signal — user explicitly told us)
+  try {
+    const tm = tasteMaps();
+    if (tm.up.has(artist)) r += 4;
+    if (tm.down.has(artist)) r -= 5;
+    if (tm.downIds.has(`yt-${v.id}`)) r -= 12;
+  } catch { /* */ }
 
   // Penalize obvious non-song noise
   if (/\b(reaction|review|tutorial|cover guitar|how to)\b/i.test(v.title)) r -= 3;
