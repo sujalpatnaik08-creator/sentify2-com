@@ -1,5 +1,6 @@
 // Translate lyrics via Lovable AI Gateway.
-// Public function (no JWT) so it works for guest playback too.
+// Requires an authenticated Sentify user (verify_jwt = true + getUser check)
+// so paid AI credits can't be drained by anonymous callers.
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
