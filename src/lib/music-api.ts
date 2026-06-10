@@ -1,5 +1,6 @@
 import type { Track } from "@/types/music";
 import { supabase } from "@/integrations/supabase/client";
+import { getTasteMaps as tasteMaps } from "@/lib/taste-profile";
 
 // =============================================================================
 // Music sources
