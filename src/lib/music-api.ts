@@ -358,7 +358,8 @@ export async function searchByLyrics(phrase: string, limit = 6): Promise<LyricMa
 // Document = a search term (track title, artist, query). We tokenise on
 // whitespace, lowercase, strip punctuation; then index unigrams + character
 // trigrams so misspellings still match (e.g. "shap of yu" → "shape of you").
-type VoyagerDoc = { id: number; text: string; pop: number };
+type DocKind = "song" | "artist" | "query";
+type VoyagerDoc = { id: number; text: string; pop: number; kind: DocKind };
 class VoyagerIndex {
   private docs: VoyagerDoc[] = [];
   private byId = new Map<string, number>();
@@ -377,14 +378,15 @@ class VoyagerIndex {
     for (let i = 0; i <= t.length - 3; i++) out.push(t.slice(i, i + 3));
     return out;
   }
-  add(text: string, pop = 1): void {
-    const key = VoyagerIndex.normalize(text);
-    if (!key) return;
+  add(text: string, pop = 1, kind: DocKind = "query"): void {
+    const key = `${kind}:${VoyagerIndex.normalize(text)}`;
+    if (!key.endsWith(":")) { /* */ }
+    if (VoyagerIndex.normalize(text) === "") return;
     const existing = this.byId.get(key);
     if (existing != null) { this.docs[existing].pop = Math.max(this.docs[existing].pop, pop); return; }
     const id = this.nextId++;
     this.byId.set(key, id);
-    this.docs[id] = { id, text, pop };
+    this.docs[id] = { id, text, pop, kind };
     const seen = new Set<string>();
     for (const tok of VoyagerIndex.tokens(text)) {
       if (seen.has(tok)) continue;
@@ -399,7 +401,6 @@ class VoyagerIndex {
     if (this.docs.length > 5000) this.evictLowestPop();
   }
   private evictLowestPop() {
-    // keep memory bounded — drop ~10% lowest-pop docs
     const sorted = [...this.docs].sort((a, b) => a.pop - b.pop).slice(0, 500);
     const dropIds = new Set(sorted.map((d) => d.id));
     for (const [k, set] of this.postings) {
@@ -407,9 +408,10 @@ class VoyagerIndex {
       if (set.size === 0) this.postings.delete(k);
     }
   }
-  search(q: string, limit = 8): string[] {
+  search(q: string, limit = 8, kinds?: DocKind[]): string[] {
     const qn = VoyagerIndex.normalize(q);
     if (!qn) return [];
+    const allow = kinds ? new Set(kinds) : null;
     const scores = new Map<number, number>();
     const bump = (id: number, s: number) => scores.set(id, (scores.get(id) || 0) + s);
     for (const tok of VoyagerIndex.tokens(qn)) {
@@ -424,6 +426,7 @@ class VoyagerIndex {
     for (const [id, s] of scores) {
       const d = this.docs[id];
       if (!d) continue;
+      if (allow && !allow.has(d.kind)) continue;
       let score = s + Math.log10(1 + d.pop);
       const norm = VoyagerIndex.normalize(d.text);
       if (norm.startsWith(qn)) score += 6;
@@ -441,17 +444,19 @@ try {
   const raw = typeof localStorage !== "undefined" ? localStorage.getItem("sentify_search_history") : null;
   if (raw) {
     const arr: string[] = JSON.parse(raw);
-    arr.forEach((q, i) => voyager.add(q, arr.length - i));
+    arr.forEach((q, i) => voyager.add(q, arr.length - i, "query"));
   }
 } catch { /* ignore */ }
 
 // Public helpers — used by TopBar to feed the index as users browse.
+// We index the song title as kind:"song" (the only kind we surface in the
+// autocomplete dropdown) and the artist as kind:"artist" for future use.
 export function indexTrackForSearch(title: string, artist?: string, pop = 1): void {
-  if (title) voyager.add(title, pop);
-  if (artist) voyager.add(artist, pop);
-  if (title && artist) voyager.add(`${artist} ${title}`, pop);
+  if (title) voyager.add(cleanDisplayTitle(title), pop, "song");
+  if (artist) voyager.add(artist, pop, "artist");
 }
-export function indexQueryTerm(q: string, pop = 5): void { voyager.add(q, pop); }
+export function indexQueryTerm(q: string, pop = 5): void { voyager.add(q, pop, "query"); }
+
 
 const suggestCache = new Map<string, { ts: number; data: string[] }>();
 const SUGGEST_TTL = 10 * 60 * 1000;
