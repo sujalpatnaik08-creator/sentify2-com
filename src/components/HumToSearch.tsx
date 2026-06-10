@@ -323,7 +323,7 @@ export const HumToSearch = () => {
         setRecording(false);
         if (!continuousRef.current) break;
         setIdentifying(true);
-        const match = await identifyBlob(blob);
+        const match = await identifyBlob(blob, chunkPeakRef.current);
         if (match) {
           setMatches((prev) => {
             // Dedupe consecutive identical matches
