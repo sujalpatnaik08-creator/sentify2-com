@@ -1,9 +1,12 @@
 import type { Track } from "@/types/music";
-import { Play, Pause, Plus } from "lucide-react";
+import { Play, Pause, Plus, ThumbsUp, ThumbsDown } from "lucide-react";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { forwardRef } from "react";
+import { forwardRef, useEffect, useState } from "react";
+import { getVote, setVote } from "@/lib/taste-profile";
+import { invalidateTasteCache } from "@/lib/music-api";
+import { toast } from "@/hooks/use-toast";
 
 interface TrackCardProps {
   track: Track;
@@ -14,6 +17,25 @@ export const TrackCard = forwardRef<HTMLDivElement, TrackCardProps>(({ track, qu
   const { current, isPlaying, playTrack, togglePlay, addToQueue } = usePlayer();
   const isCurrent = current?.id === track.id;
   const showPause = isCurrent && isPlaying;
+  const [vote, setVoteState] = useState<"up" | "down" | null>(() => getVote(track.id));
+
+  useEffect(() => {
+    const onChange = () => setVoteState(getVote(track.id));
+    window.addEventListener("sentify:taste-changed", onChange);
+    return () => window.removeEventListener("sentify:taste-changed", onChange);
+  }, [track.id]);
+
+  const cast = (e: React.MouseEvent, v: "up" | "down") => {
+    e.stopPropagation();
+    const next = vote === v ? null : v;
+    setVote(track, next);
+    setVoteState(next);
+    invalidateTasteCache();
+    toast({
+      title: next === "up" ? "Thanks — more like this" : next === "down" ? "Got it — fewer like this" : "Reset",
+      description: next ? "Recommendations will adapt." : undefined,
+    });
+  };
 
   return (
     <div ref={ref} className="group relative bg-card/40 hover:bg-card/80 rounded-xl p-4 transition-all duration-300 hover:shadow-[var(--shadow-card)] cursor-pointer">
@@ -41,6 +63,31 @@ export const TrackCard = forwardRef<HTMLDivElement, TrackCardProps>(({ track, qu
       <div className="space-y-1">
         <h3 className={cn("font-semibold truncate", isCurrent && "text-primary")}>{track.title}</h3>
       </div>
+
+      {/* Taste profile thumbs */}
+      <div className="absolute top-2 left-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={(e) => cast(e, "up")}
+          className={cn("h-7 w-7 rounded-full bg-background/70 backdrop-blur", vote === "up" && "text-primary bg-primary/15")}
+          aria-label="Thumbs up"
+          title="More like this"
+        >
+          <ThumbsUp className="w-3.5 h-3.5" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={(e) => cast(e, "down")}
+          className={cn("h-7 w-7 rounded-full bg-background/70 backdrop-blur", vote === "down" && "text-destructive bg-destructive/15")}
+          aria-label="Thumbs down"
+          title="Fewer like this"
+        >
+          <ThumbsDown className="w-3.5 h-3.5" />
+        </Button>
+      </div>
+
       <Button
         variant="ghost"
         size="icon"
