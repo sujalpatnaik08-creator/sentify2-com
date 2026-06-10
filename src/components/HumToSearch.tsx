@@ -38,6 +38,7 @@ export const HumToSearch = () => {
   const rafRef = useRef<number | null>(null);
   const continuousRef = useRef(false);
   const stopAllRef = useRef(false);
+  const chunkPeakRef = useRef(0);
 
   // Draw waveform on canvas while a stream is active
   const drawWave = useCallback(() => {
