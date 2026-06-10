@@ -287,7 +287,7 @@ export const HumToSearch = () => {
       const blob = await recordChunk(8000);
       setRecording(false);
       setIdentifying(true);
-      const match = await identifyBlob(blob);
+      const match = await identifyBlob(blob, chunkPeakRef.current);
       if (match) {
         setMatches((prev) => [match, ...prev].slice(0, 12));
         toast({ title: `Found: ${match.title}`, description: match.artist || "" });
