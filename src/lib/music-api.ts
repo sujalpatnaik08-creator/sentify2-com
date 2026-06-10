@@ -126,6 +126,9 @@ const getTasteArtists = (): Set<string> => {
   return set;
 };
 export const invalidateTasteCache = () => { _tasteCache = null; };
+if (typeof window !== "undefined") {
+  window.addEventListener("sentify:taste-changed", () => { _tasteCache = null; });
+}
 
 const relevanceScore = (q: string, v: YtVideo): number => {
   const query = norm(q);
