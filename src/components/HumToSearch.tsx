@@ -154,8 +154,24 @@ export const HumToSearch = () => {
     }
   };
 
-  const identifyBlob = async (blob: Blob): Promise<Match | null> => {
-    if (blob.size < 2000) return null;
+  // Confidence thresholds — only auto-accept a strong match. Borderline
+  // matches surface as a "did you mean?" toast so the user can confirm or
+  // retry with a longer/cleaner sample.
+  const AUTO_ACCEPT = 0.65; // ≥ → auto-add
+  const SUGGEST_MIN = 0.4;  // ≥ but < AUTO_ACCEPT → confirm
+  // Calibration — reject the sample early when the captured signal was
+  // too quiet to fingerprint. Saves an API call and gives a clear message.
+  const MIN_LEVEL = 0.04;
+
+  const identifyBlob = async (blob: Blob, peakLevel: number): Promise<Match | null> => {
+    if (blob.size < 2000) {
+      toast({ title: "Sample too short", description: "Hum for a bit longer and try again." });
+      return null;
+    }
+    if (peakLevel < MIN_LEVEL) {
+      toast({ title: "Too quiet to match", description: "Move closer to the mic and retry." });
+      return null;
+    }
     const cleaned = await cleanAudio(blob);
     const buf = new Uint8Array(await cleaned.arrayBuffer());
     let bin = "";
@@ -171,12 +187,20 @@ export const HumToSearch = () => {
     }
     const m = data?.match;
     if (!m?.searchQuery) return null;
+    const confidence: number = typeof m.confidence === "number" ? m.confidence : 0;
+    if (confidence < SUGGEST_MIN) {
+      toast({
+        title: "No confident match",
+        description: "Try humming the chorus again for a cleaner match.",
+      });
+      return null;
+    }
     let tracks: Track[] = [];
     try {
       const res = await searchTracks(m.searchQuery, 4);
       tracks = res.slice(0, 4);
     } catch { /* keep match without tracks */ }
-    return {
+    const match: Match = {
       title: m.title,
       artist: m.artist,
       album: m.album,
@@ -184,6 +208,13 @@ export const HumToSearch = () => {
       identifiedAt: Date.now(),
       tracks,
     };
+    if (confidence < AUTO_ACCEPT) {
+      toast({
+        title: `Maybe: ${m.title}`,
+        description: `${Math.round(confidence * 100)}% match — hum again to confirm or accept below.`,
+      });
+    }
+    return match;
   };
 
   const recordChunk = (durationMs: number): Promise<Blob> =>
