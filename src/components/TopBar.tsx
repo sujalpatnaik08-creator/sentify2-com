@@ -19,7 +19,7 @@ import {
   getSearchHistory,
 } from "@/lib/user-prefs";
 import { useAuth } from "@/contexts/AuthContext";
-import { suggestQueries } from "@/lib/music-api";
+import { suggestQueries, cleanDisplayTitle } from "@/lib/music-api";
 import { supabase } from "@/integrations/supabase/client";
 import { SettingsMenu } from "@/components/SettingsMenu";
 
@@ -318,7 +318,7 @@ export const TopBar = () => {
                       ) : (
                         <SearchIcon className="w-4 h-4 text-muted-foreground shrink-0" />
                       )}
-                      <span className="truncate">{s.split(/[-–—]|by\s+/i)[0].trim() || s}</span>
+                      <span className="truncate">{cleanDisplayTitle(s)}</span>
                     </button>
                   </li>
                 );
