@@ -465,8 +465,8 @@ export async function suggestQueries(prefix: string): Promise<string[]> {
   if (p.length < 1) return [];
   const key = p.toLowerCase();
 
-  // 1) Local Voyager hit — sub-millisecond. Surface immediately.
-  const local = voyager.search(p, 8);
+  // 1) Local NIS hit — songs only, sub-millisecond. Surface immediately.
+  const local = voyager.search(p, 8, ["song"]).map(cleanDisplayTitle);
 
   const hit = suggestCache.get(key);
   if (hit && Date.now() - hit.ts < SUGGEST_TTL) {
@@ -477,9 +477,16 @@ export async function suggestQueries(prefix: string): Promise<string[]> {
     const res = await fetch(url);
     if (!res.ok) return local;
     const arr = await res.json();
-    const list: string[] = Array.isArray(arr?.[1]) ? arr[1].slice(0, 8) : [];
+    const raw: string[] = Array.isArray(arr?.[1]) ? arr[1].slice(0, 12) : [];
+    // Clean each suggestion to a bare song title and drop empties / duplicates.
+    const list: string[] = [];
+    for (const s of raw) {
+      const c = cleanDisplayTitle(s);
+      if (c && !list.some((x) => x.toLowerCase() === c.toLowerCase())) list.push(c);
+      if (list.length >= 8) break;
+    }
     suggestCache.set(key, { ts: Date.now(), data: list });
-    list.forEach((s) => voyager.add(s, 2));
+    list.forEach((s) => voyager.add(s, 2, "song"));
     return mergeUnique(local, list, 8);
   } catch {
     return local;
