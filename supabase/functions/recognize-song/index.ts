@@ -120,6 +120,18 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Normalise score → 0..1 confidence. AudD returns either `score` (0..100)
+    // on findHummed or no score on /. For exact fingerprint matches the
+    // presence of a result alone is high-confidence (~0.95).
+    let confidence = 0;
+    if (typeof r.score === "number") {
+      confidence = Math.max(0, Math.min(1, r.score > 1 ? r.score / 100 : r.score));
+    } else if (body.mode !== "hum") {
+      confidence = 0.95; // fingerprint match
+    } else {
+      confidence = 0.5; // unknown — treat as borderline
+    }
+
     return new Response(
       JSON.stringify({
         match: {
@@ -129,6 +141,8 @@ Deno.serve(async (req) => {
           releaseDate: r.release_date,
           spotify: r.spotify?.external_urls?.spotify || null,
           searchQuery: `${r.artist || ""} ${r.title || ""}`.trim(),
+          score: typeof r.score === "number" ? r.score : null,
+          confidence,
         },
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
