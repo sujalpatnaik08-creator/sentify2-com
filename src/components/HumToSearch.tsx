@@ -223,6 +223,7 @@ export const HumToSearch = () => {
     new Promise((resolve, reject) => {
       const stream = streamRef.current;
       if (!stream) return reject(new Error("No stream"));
+      chunkPeakRef.current = 0;
       const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
         ? "audio/webm;codecs=opus"
         : MediaRecorder.isTypeSupported("audio/webm")
