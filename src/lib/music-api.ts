@@ -278,6 +278,62 @@ async function youtubeSearchVideos(query: string, limit: number): Promise<Track[
   return tracks;
 }
 
+// ---------- Display cleaning: keep only the song name (no movie/singer/artist) ----------
+// Strips common YouTube/Bollywood noise so the search bar only shows the song
+// title — e.g. "Khuda Jaane | Full Song | Bachna Ae Haseeno | Ranbir Kapoor, Deepika | Vishal & Shekhar, KK, Shilpa"
+// becomes "Khuda Jaane".
+const NOISE_RE = /\b(full (?:song|video|audio|hd)|official(?:\s+(?:video|audio|music\s+video|lyric(?:s)?(?:\s+video)?))?|video\s+song|lyrical(?:\s+video)?|lyric(?:s)?(?:\s+video)?|audio(?:\s+song)?|hd|4k|mv|m\/v|status|whatsapp|new|latest|hindi\s+song|bollywood|t-?series|sony\s+music|saregama|zee\s+music|yrf|reprise|cover|remix|extended|slowed(?:\s*\+?\s*reverb)?|reverb|sped\s*up|live(?:\s+performance)?|unplugged|bgm|theme|presents|feat\.?|ft\.?|prod\.?|by)\b/gi;
+export const cleanDisplayTitle = (raw: string): string => {
+  if (!raw) return raw;
+  let s = raw.replace(/\([^)]*\)/g, " ").replace(/\[[^\]]*\]/g, " ").replace(/\{[^}]*\}/g, " ");
+  // First segment before pipes/dashes is usually the song name
+  s = s.split(/\s*[|·•]\s*/)[0];
+  s = s.split(/\s+[-–—]\s+/)[0];
+  s = s.replace(NOISE_RE, " ");
+  s = s.replace(/[“”"']/g, "");
+  s = s.replace(/\s{2,}/g, " ").replace(/[\s,;:.-]+$/g, "").trim();
+  return s || raw.trim();
+};
+
+// ---------- Multi-Task Intent Identification ----------
+// Lightweight classifier — figures out whether the user is searching for a
+// song, artist, album, playlist, or trying to match a lyric line. Used by
+// the voice assistant + future re-ranking.
+export type SearchIntent = "song" | "artist" | "album" | "playlist" | "lyric";
+export const detectIntent = (q: string): SearchIntent => {
+  const s = q.toLowerCase().trim();
+  if (/\b(lyrics?|the line|that goes|words to)\b/.test(s)) return "lyric";
+  if (/\b(album|ep|soundtrack|ost)\b/.test(s)) return "album";
+  if (/\b(playlist|mix|radio|chart|top\s*\d+)\b/.test(s)) return "playlist";
+  if (/^(artist|band|singer|by)\s+/.test(s)) return "artist";
+  if (s.split(/\s+/).length <= 2 && /^[a-z][a-z\s.'-]+$/.test(s)) {
+    // Two-word capitalised guesses usually = artist name
+    return "artist";
+  }
+  return "song";
+};
+
+// ---------- Lyric-Matching Engine ----------
+// Given a phrase the user remembers ("we found love in a hopeless place"),
+// query LRCLIB's plain-lyrics search and return candidate tracks.
+export interface LyricMatch { artist: string; title: string; snippet: string }
+export async function searchByLyrics(phrase: string, limit = 6): Promise<LyricMatch[]> {
+  const q = phrase.trim();
+  if (q.length < 4) return [];
+  try {
+    const res = await fetch(`https://lrclib.net/api/search?q=${encodeURIComponent(q)}`);
+    if (!res.ok) return [];
+    const arr = await res.json();
+    if (!Array.isArray(arr)) return [];
+    return arr.slice(0, limit).map((h: { artistName?: string; trackName?: string; plainLyrics?: string }) => ({
+      artist: h.artistName || "",
+      title: h.trackName || "",
+      snippet: (h.plainLyrics || "").split("\n").find((l) => l.toLowerCase().includes(q.toLowerCase())) || "",
+    }));
+  } catch { return []; }
+}
+
+
 // ---------- Autocomplete suggestions (Spotify-like predictive search) ----------
 // Powered by:
 //   1. **VoyagerIndex** — a tiny in-memory inverted-index + n-gram fuzzy
