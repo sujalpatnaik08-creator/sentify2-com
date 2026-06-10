@@ -265,11 +265,48 @@ async function fanoutSearch(query: string, limit: number): Promise<Item[]> {
   return merged;
 }
 
+// --- Per-IP sliding-window rate limit ---------------------------------
+// Caps anonymous scraping abuse (Sentify's home page needs guest access,
+// so we can't require a JWT). 60 requests / minute / IP is plenty for
+// real users typing in the search box.
+const RATE_WINDOW_MS = 60_000;
+const RATE_MAX = 60;
+const RATE_BUCKETS = new Map<string, number[]>();
+const clientIp = (req: Request): string => {
+  const xff = req.headers.get("x-forwarded-for") ?? "";
+  return xff.split(",")[0]?.trim() ||
+    req.headers.get("cf-connecting-ip") ||
+    req.headers.get("x-real-ip") ||
+    "unknown";
+};
+const rateLimited = (ip: string): boolean => {
+  const now = Date.now();
+  const arr = (RATE_BUCKETS.get(ip) ?? []).filter((t) => now - t < RATE_WINDOW_MS);
+  if (arr.length >= RATE_MAX) {
+    RATE_BUCKETS.set(ip, arr);
+    return true;
+  }
+  arr.push(now);
+  RATE_BUCKETS.set(ip, arr);
+  // Bound memory
+  if (RATE_BUCKETS.size > 5000) {
+    const k = RATE_BUCKETS.keys().next().value;
+    if (k) RATE_BUCKETS.delete(k);
+  }
+  return false;
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
   try {
+    if (rateLimited(clientIp(req))) {
+      return new Response(
+        JSON.stringify({ items: [], error: "Rate limit exceeded" }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
     const url = new URL(req.url);
     const q = url.searchParams.get("q")?.trim();
     const limit = Math.min(parseInt(url.searchParams.get("limit") ?? "30", 10), 50);
