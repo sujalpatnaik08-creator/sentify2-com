@@ -21,7 +21,8 @@ export const VoiceAssistant = () => {
   const [active, setActive] = useState(false);
   const [busy, setBusy] = useState(false);
   const [heard, setHeard] = useState("");
-  const srRef = useRef<SpeechRecognition | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const srRef = useRef<any>(null);
   const activeRef = useRef(false);
   const { playTrack, togglePlay, next, prev, isPlaying } = usePlayer();
 
@@ -77,19 +78,21 @@ export const VoiceAssistant = () => {
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const SR: any = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    const sr: SpeechRecognition = new SR();
+    const sr = new SR();
     sr.lang = navigator.language || "en-US";
     sr.continuous = true;
     sr.interimResults = false;
     sr.maxAlternatives = 1;
-    sr.onresult = (e: SpeechRecognitionEvent) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    sr.onresult = (e: any) => {
       for (let i = e.resultIndex; i < e.results.length; i++) {
         if (e.results[i].isFinal) {
           handleTranscript(e.results[i][0].transcript);
         }
       }
     };
-    sr.onerror = (e: SpeechRecognitionErrorEvent) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    sr.onerror = (e: any) => {
       if (e.error === "not-allowed" || e.error === "service-not-allowed") {
         toast({ title: "Microphone blocked", description: "Allow mic access for voice commands." });
         setActive(false);
