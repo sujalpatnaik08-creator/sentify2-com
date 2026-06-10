@@ -27,6 +27,41 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Require an authenticated Sentify user so anonymous callers can't drain
+    // the paid AudD API credits.
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const jwt = authHeader.toLowerCase().startsWith("bearer ")
+      ? authHeader.slice(7).trim()
+      : "";
+    if (!jwt) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    try {
+      const { createClient } = await import(
+        "https://esm.sh/@supabase/supabase-js@2.45.0"
+      );
+      const supa = createClient(
+        Deno.env.get("SUPABASE_URL") ?? "",
+        Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+        { global: { headers: { Authorization: `Bearer ${jwt}` } } },
+      );
+      const { data: { user }, error: authErr } = await supa.auth.getUser(jwt);
+      if (authErr || !user) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    } catch {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const body = (await req.json()) as RecognizeBody;
     if (!body?.audioBase64 || typeof body.audioBase64 !== "string") {
       return new Response(JSON.stringify({ error: "Missing audioBase64" }), {
