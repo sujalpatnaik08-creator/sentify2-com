@@ -5,6 +5,7 @@ import { LyricsPanel } from "./LyricsPanel";
 import { QueuePanel } from "./QueuePanel";
 import { TopBar } from "./TopBar";
 import { NowPlayingView } from "./NowPlayingView";
+import { VoiceAssistant } from "./VoiceAssistant";
 import { useAuth } from "@/contexts/AuthContext";
 
 export const AppLayout = ({ children }: { children: ReactNode }) => {
@@ -47,6 +48,7 @@ export const AppLayout = ({ children }: { children: ReactNode }) => {
       {signedIn && (
         <NowPlayingView open={showNowPlaying} onOpenChange={setShowNowPlaying} />
       )}
+      {signedIn && <VoiceAssistant />}
     </div>
   );
 };
