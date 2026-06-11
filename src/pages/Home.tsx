@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { ChevronLeft, ChevronRight, Play, Headphones, Sparkles } from "lucide-react";
 import { MoodFilter } from "@/components/MoodFilter";
-import { HumToSearch } from "@/components/HumToSearch";
 import { TrackCard } from "@/components/TrackCard";
 import { topTracks, tracksByTag } from "@/lib/music-api";
 import type { Mood, Track } from "@/types/music";
@@ -174,10 +173,6 @@ const Home = () => {
         </div>
       </section>
 
-      {/* === HUM TO SEARCH =================================================== */}
-      <section className="px-6 md:px-10 py-4 max-w-7xl mx-auto">
-        <HumToSearch />
-      </section>
 
       {/* === MOOD FILTER ===================================================== */}
       <section className="px-6 md:px-10 py-4 max-w-7xl mx-auto">

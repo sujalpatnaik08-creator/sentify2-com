@@ -6,6 +6,8 @@ import {
   Music,
   ListMusic,
   Disc3,
+  // History removed — accessible via Settings → Content
+
   Mic2,
   History,
   LogOut,
@@ -31,7 +33,6 @@ const yourMusic: Item[] = [
   { to: "/library?tab=playlists", icon: ListMusic, label: "Playlists" },
   { to: "/library?tab=albums", icon: Disc3, label: "Albums" },
   { to: "/library?tab=artists", icon: Mic2, label: "Artists" },
-  { to: "/library?tab=history", icon: History, label: "History" },
 ];
 
 export const Sidebar = () => {
