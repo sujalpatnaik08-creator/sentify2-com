@@ -41,7 +41,7 @@ import {
 import type { Track } from "@/types/music";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { cn } from "@/lib/utils";
-import { getLikedTracks, toggleLikedTrack } from "@/lib/user-prefs";
+import { getLikedTracks, toggleLikedTrack, getSearchHistory, addSearchHistory, clearSearchHistory } from "@/lib/user-prefs";
 import {
   isDownloaded,
   downloadTrack,
@@ -51,7 +51,8 @@ import {
 } from "@/lib/offline-store";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
-import { X, WifiOff } from "lucide-react";
+import { X, WifiOff, History as HistoryIcon, Trash2 } from "lucide-react";
+import { HumToSearch } from "@/components/HumToSearch";
 
 const SUGGESTIONS = ["Daylight", "Arijit Singh", "Coldplay", "Lo-fi", "Taylor Swift", "Khuda Jaane"];
 // Spotify search tab order: All, Songs, Artists, Albums, Playlists, Profiles
@@ -909,12 +910,7 @@ const Search = () => {
         </div>
       )}
 
-      {!q && (
-        <div className="text-center py-12 text-muted-foreground">
-          <SearchIcon className="w-12 h-12 mx-auto mb-3 opacity-50" />
-          <p>Search for any song, artist, album or playlist</p>
-        </div>
-      )}
+      {!q && <SearchEmptyState />}
 
       {!loading && !error && (tracks.length > 0 || artists.length > 0 || playlists.length > 0) && (
         <div className="animate-fade-in">
@@ -1099,3 +1095,74 @@ const DebugStat = ({ icon, label, value }: { icon: React.ReactNode; label: strin
 );
 
 export default Search;
+
+// Empty-state shown when there is no active query.
+// Surfaces Hum-to-Search (moved here from Home) + a "Recent searches" list
+// the user can click to repeat or clear. Provides a quiet entry point so
+// the search page never feels barren.
+const SearchEmptyState = () => {
+  const navigate = useNavigate();
+  const [history, setHistory] = useState<string[]>(() => getSearchHistory());
+  useEffect(() => {
+    const refresh = () => setHistory(getSearchHistory());
+    window.addEventListener("storage", refresh);
+    window.addEventListener("focus", refresh);
+    return () => {
+      window.removeEventListener("storage", refresh);
+      window.removeEventListener("focus", refresh);
+    };
+  }, []);
+  const go = (s: string) => {
+    addSearchHistory(s);
+    navigate(`/search?q=${encodeURIComponent(s)}`);
+  };
+  const clearAll = () => {
+    clearSearchHistory();
+    setHistory([]);
+  };
+  return (
+    <div className="space-y-8 animate-fade-in">
+      <section>
+        <h2 className="text-xl md:text-2xl font-bold mb-3">Identify a song</h2>
+        <HumToSearch />
+      </section>
+
+      <section>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-xl md:text-2xl font-bold flex items-center gap-2">
+            <HistoryIcon className="w-5 h-5" /> Recent searches
+          </h2>
+          {history.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearAll}
+              className="text-xs gap-1.5 text-muted-foreground hover:text-destructive"
+            >
+              <Trash2 className="w-3.5 h-3.5" /> Clear
+            </Button>
+          )}
+        </div>
+        {history.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Your recently searched songs will appear here.
+          </p>
+        ) : (
+          <ul className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {history.slice(0, 18).map((s) => (
+              <li key={s}>
+                <button
+                  onClick={() => go(s)}
+                  className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-lg bg-card/40 hover:bg-card border border-border/40 transition-colors"
+                >
+                  <HistoryIcon className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <span className="truncate text-sm font-medium">{s}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </div>
+  );
+};

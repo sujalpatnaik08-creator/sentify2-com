@@ -130,6 +130,12 @@ class PlaybackEngine {
   private prebufferStarted = false;
   private nextTrackBuffered: Track | null = null;
 
+  // Robustness — every playTrack() call bumps playSeq so any pending async
+  // YT load / play() promise from a previous track is detected as stale and
+  // dropped. Prevents the "two songs playing at once" bug when the user
+  // rapid-fires tracks from autocomplete or voice search.
+  private playSeq = 0;
+
   private lastUiTick = 0;
 
   constructor() {
@@ -634,6 +640,7 @@ class PlaybackEngine {
   // ------- Public API -------
   playTrack(track: Track, queue?: Track[]) {
     this.ensureCtx();
+    const mySeq = ++this.playSeq;
     this.crossfadeArmed = false;
     this.prebufferStarted = false;
     this.nextTrackBuffered = null;
@@ -643,10 +650,15 @@ class PlaybackEngine {
     try { addRecentlyPlayed(track); } catch { /* */ }
     this.updateMediaSession(track);
 
-    // Stop both audio elements + YT
+    // CRITICAL for gapless / robust track switching: hard-stop both audio
+    // elements AND the YT iframe before anything else. Without this, a
+    // previous play().then() callback from autocomplete or voice triggers
+    // can race with the new track and create double-audio overlap.
     [this.audioA, this.audioB].forEach((a) => {
       try { a.pause(); } catch { /* */ }
+      try { a.currentTime = 0; } catch { /* */ }
       a.removeAttribute("src");
+      try { a.load(); } catch { /* */ }
     });
     try { this.yt?.stopVideo?.(); } catch { /* */ }
     if (this.ytTickHandle) { window.clearInterval(this.ytTickHandle); this.ytTickHandle = null; }
@@ -662,6 +674,7 @@ class PlaybackEngine {
       queue: newQueue,
       progress: 0,
       duration: track.duration || 0,
+      isPlaying: false,
     });
 
     if (track.source === "youtube") {
@@ -671,19 +684,31 @@ class PlaybackEngine {
         return;
       }
       const start = () => {
+        if (mySeq !== this.playSeq) return; // stale — user switched again
         try {
           this.yt.loadVideoById(track.audioUrl);
           this.yt.setVolume(s.volume * 100);
           this.yt.playVideo();
+          // Poll briefly until YT reports a duration so the seek bar and
+          // "now playing" timer aren't stuck at 0:00 after rapid switches.
+          let tries = 0;
+          const poll = window.setInterval(() => {
+            if (mySeq !== this.playSeq || tries++ > 20) { window.clearInterval(poll); return; }
+            const d = this.yt?.getDuration?.() || 0;
+            if (d > 0) {
+              usePlayerStore.getState()._set({ duration: d });
+              window.clearInterval(poll);
+            }
+          }, 250);
         } catch (e) { console.warn("YT play failed", e); }
       };
       if (this.ytReady) start();
-      else loadYouTubeAPI().then(() => setTimeout(start, 300));
+      else loadYouTubeAPI().then(() => setTimeout(() => { if (mySeq === this.playSeq) start(); }, 300));
     } else {
       // Validate audius URL
       try {
         const url = new URL(track.audioUrl);
-        if (url.protocol !== "https:" && url.protocol !== "http:") return;
+        if (url.protocol !== "https:" && url.protocol !== "http:" && url.protocol !== "blob:") return;
       } catch { return; }
       this.active = "A";
       this.analyserActive = "A";
@@ -696,7 +721,11 @@ class PlaybackEngine {
       }
       this.audioA.src = track.audioUrl;
       this.audioA.volume = this.ctx ? 1 : s.volume; // when WebAudio is wired, volume is on the gain node
-      this.audioA.play().catch((e) => console.warn("Playback failed", e));
+      this.audioA.play().then(() => {
+        if (mySeq !== this.playSeq) {
+          try { this.audioA.pause(); } catch { /* */ }
+        }
+      }).catch((e) => console.warn("Playback failed", e));
     }
   }
 

@@ -19,7 +19,19 @@ const K = {
   bgPlayback: "sentify_bg_playback",   // "1" | "0"  — Media Session + Wake Lock
   defaultLyricsLang: "sentify_lyrics_lang", // string code — auto-translate target
   alwaysTranslate: "sentify_lyrics_always", // "1" | "0"
+  tasteProfile: "sentify_taste_enabled",    // "1" | "0" — privacy opt-out
 };
+
+// ---------- Taste profile privacy toggle ----------
+// When OFF: thumbs up/down are ignored, no listening signals stored for
+// personalization, recommendations fall back to popularity-only.
+export function getTasteProfileEnabled(): boolean {
+  try { return localStorage.getItem(K.tasteProfile) !== "0"; } catch { return true; }
+}
+export function setTasteProfileEnabled(on: boolean) {
+  try { localStorage.setItem(K.tasteProfile, on ? "1" : "0"); } catch { /* */ }
+  window.dispatchEvent(new CustomEvent("sentify:taste-changed"));
+}
 
 // ---------- Lyrics translation defaults ----------
 export function getDefaultLyricsLang(): string {
