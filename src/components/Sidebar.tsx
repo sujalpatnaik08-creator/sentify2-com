@@ -6,10 +6,7 @@ import {
   Music,
   ListMusic,
   Disc3,
-  // History removed — accessible via Settings → Content
-
   Mic2,
-  History,
   LogOut,
   PlayCircle,
   Heart,
