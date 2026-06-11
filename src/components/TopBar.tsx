@@ -243,8 +243,10 @@ export const TopBar = () => {
     }
   };
 
+  const showSearchBar = loc.pathname !== "/";
   return (
     <header className="sticky top-0 z-20 h-16 bg-background/70 backdrop-blur-xl border-b border-border/50 flex items-center px-6 gap-4">
+      {showSearchBar ? (
       <div ref={wrapRef} className="relative flex-1 max-w-2xl">
         <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
@@ -327,6 +329,9 @@ export const TopBar = () => {
           </div>
         )}
       </div>
+      ) : (
+        <div className="flex-1" />
+      )}
 
       <div className="ml-auto flex items-center gap-2">
         <SettingsMenu />
