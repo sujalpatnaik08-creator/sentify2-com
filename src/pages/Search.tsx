@@ -41,7 +41,7 @@ import {
 import type { Track } from "@/types/music";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { cn } from "@/lib/utils";
-import { getLikedTracks, toggleLikedTrack } from "@/lib/user-prefs";
+import { getLikedTracks, toggleLikedTrack, getSearchHistory, addSearchHistory, clearSearchHistory } from "@/lib/user-prefs";
 import {
   isDownloaded,
   downloadTrack,
@@ -51,7 +51,8 @@ import {
 } from "@/lib/offline-store";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
-import { X, WifiOff } from "lucide-react";
+import { X, WifiOff, History as HistoryIcon, Trash2 } from "lucide-react";
+import { HumToSearch } from "@/components/HumToSearch";
 
 const SUGGESTIONS = ["Daylight", "Arijit Singh", "Coldplay", "Lo-fi", "Taylor Swift", "Khuda Jaane"];
 // Spotify search tab order: All, Songs, Artists, Albums, Playlists, Profiles
@@ -909,12 +910,7 @@ const Search = () => {
         </div>
       )}
 
-      {!q && (
-        <div className="text-center py-12 text-muted-foreground">
-          <SearchIcon className="w-12 h-12 mx-auto mb-3 opacity-50" />
-          <p>Search for any song, artist, album or playlist</p>
-        </div>
-      )}
+      {!q && <SearchEmptyState />}
 
       {!loading && !error && (tracks.length > 0 || artists.length > 0 || playlists.length > 0) && (
         <div className="animate-fade-in">
