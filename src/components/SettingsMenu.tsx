@@ -59,7 +59,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { usePlayer } from "@/contexts/PlayerContext";
-import { getPerfMode, setPerfMode } from "@/lib/user-prefs";
+import { getPerfMode, setPerfMode, getTasteProfileEnabled, setTasteProfileEnabled } from "@/lib/user-prefs";
 import { SessionsPanel } from "@/components/SessionsPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -238,6 +238,7 @@ const SectionPanel = ({
   } = usePlayer();
 
   const [perf, setPerf] = useState(getPerfMode());
+  const [tasteOn, setTasteOn] = useState(getTasteProfileEnabled());
   const [pushPerm, setPushPerm] = useState<NotificationPermission | "unsupported">(
     typeof Notification === "undefined" ? "unsupported" : Notification.permission,
   );
@@ -515,6 +516,23 @@ const SectionPanel = ({
             description="Allow others to discover playlists you create"
             control={<Switch checked={publicPlaylists} onCheckedChange={setPublicPlaylists} />}
           />
+          <Field
+            label="Personalize with taste profile"
+            description="Store thumbs up/down to improve recommendations. Turn off to opt out — recommendations fall back to popular tracks."
+            control={
+              <Switch
+                checked={tasteOn}
+                onCheckedChange={(v) => { setTasteOn(v); setTasteProfileEnabled(v); }}
+              />
+            }
+          />
+          <Button
+            variant="ghost"
+            className="w-full justify-start h-10 mt-2"
+            onClick={() => { closeSheet(); navigate("/library?tab=history"); }}
+          >
+            View search history
+          </Button>
         </div>
       );
 
