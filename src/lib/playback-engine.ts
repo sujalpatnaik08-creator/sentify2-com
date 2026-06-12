@@ -449,7 +449,12 @@ class PlaybackEngine {
               if (this.ytTickHandle) window.clearInterval(this.ytTickHandle);
               this.ytTickHandle = window.setInterval(() => {
                 try {
-                  usePlayerStore.getState()._set({ progress: this.yt.getCurrentTime?.() || 0 });
+                  const t = this.yt.getCurrentTime?.() || 0;
+                  const d = this.yt.getDuration?.() || 0;
+                  const s2 = usePlayerStore.getState();
+                  const patch: { progress: number; duration?: number } = { progress: t };
+                  if (d > 0 && Math.abs(d - s2.duration) > 0.25) patch.duration = d;
+                  s2._set(patch);
                 } catch { /* */ }
               }, 250);
             } else if (e.data === YT.PlayerState.PAUSED) {
@@ -510,11 +515,17 @@ class PlaybackEngine {
 
     if (cur.source === "audius") {
       const a = this.activeAudio();
-      // Update progress (4Hz)
+      // Update progress (4Hz) and keep duration in sync — HTML5 audio reports
+      // duration only after `loadedmetadata` fires, so the first tick after a
+      // track switch can still show 0:00. Re-push duration here whenever it
+      // settles or changes so the seek bar never sticks.
       const now = performance.now();
       if (now - this.lastUiTick >= 250) {
         this.lastUiTick = now;
-        usePlayerStore.getState()._set({ progress: a.currentTime });
+        const ad = isFinite(a.duration) && a.duration > 0 ? a.duration : 0;
+        const patch: { progress: number; duration?: number } = { progress: a.currentTime };
+        if (ad > 0 && Math.abs(ad - s.duration) > 0.25) patch.duration = ad;
+        usePlayerStore.getState()._set(patch);
       }
 
       // Learn normalization peak (first 8s only)
