@@ -12,7 +12,7 @@ export const QueuePanel = ({ onClose }: { onClose: () => void }) => {
   const [tab, setTab] = useState<Tab>("queue");
 
   return (
-    <aside className="fixed right-0 top-0 bottom-24 w-full max-w-md glass border-l border-border/50 z-40 flex flex-col animate-slide-in-right">
+    <aside className="fixed right-0 top-0 bottom-24 w-full max-w-md glass border-l border-border/50 z-40 flex flex-col animate-fade-in">
       <header className="flex items-center justify-between px-4 pt-4 pb-2 border-b border-border/50">
         <div className="flex items-center gap-1">
           <button
