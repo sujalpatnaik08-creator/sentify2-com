@@ -89,7 +89,10 @@ export const LyricsPanel = ({ onClose }: { onClose: () => void }) => {
   const lyricsReqIdRef = useRef(0);
   const translateReqIdRef = useRef(0);
 
-  // Fetch lyrics when track changes
+  // Fetch lyrics when track changes. Intentionally keyed on `current?.id`
+  // ONLY — re-running on every `duration` change (which fires several times
+  // per track while metadata loads / YT reports duration / engine polls)
+  // wiped synced lyrics mid-song and caused the highlight to glitch.
   useEffect(() => {
     if (!current) {
       setPlain(null);
@@ -106,7 +109,9 @@ export const LyricsPanel = ({ onClose }: { onClose: () => void }) => {
     setSynced(null);
     setTranslatedPlain(null);
     setTranslatedSynced(null);
-    fetchLyrics(current.artist, current.title, duration || current.duration)
+    // Snapshot duration at fetch-time; if 0, LRCLIB still returns best-match.
+    const durHint = duration || current.duration || 0;
+    fetchLyrics(current.artist, current.title, durHint)
       .then((res) => {
         if (reqId !== lyricsReqIdRef.current) return;
         setPlain(res.plain);
@@ -124,7 +129,8 @@ export const LyricsPanel = ({ onClose }: { onClose: () => void }) => {
       .catch(() => {
         if (reqId === lyricsReqIdRef.current) setStatus("error");
       });
-  }, [current, duration]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [current?.id]);
 
   // Source lines (for active highlighting + click-to-seek)
   const sourceSynced = synced;
