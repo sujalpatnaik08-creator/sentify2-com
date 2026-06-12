@@ -449,7 +449,12 @@ class PlaybackEngine {
               if (this.ytTickHandle) window.clearInterval(this.ytTickHandle);
               this.ytTickHandle = window.setInterval(() => {
                 try {
-                  usePlayerStore.getState()._set({ progress: this.yt.getCurrentTime?.() || 0 });
+                  const t = this.yt.getCurrentTime?.() || 0;
+                  const d = this.yt.getDuration?.() || 0;
+                  const s2 = usePlayerStore.getState();
+                  const patch: { progress: number; duration?: number } = { progress: t };
+                  if (d > 0 && Math.abs(d - s2.duration) > 0.25) patch.duration = d;
+                  s2._set(patch);
                 } catch { /* */ }
               }, 250);
             } else if (e.data === YT.PlayerState.PAUSED) {
