@@ -174,17 +174,9 @@ const Home = () => {
       </section>
 
 
-      {/* === MOOD FILTER ===================================================== */}
-      <section className="px-6 md:px-10 py-4 max-w-7xl mx-auto">
-        <h2 className="text-2xl font-bold mb-4">What's your mood?</h2>
-        <MoodFilter active={mood} onSelect={setMood} />
-      </section>
-
       {/* === TRACKS ========================================================== */}
       <section className="px-6 md:px-10 py-8 max-w-7xl mx-auto">
-        <h2 className="text-2xl font-bold mb-4">
-          {mood ? `${MOODS.find((m) => m.id === mood)?.label} vibes` : "Trending now"}
-        </h2>
+        <h2 className="text-2xl font-bold mb-4">Trending now</h2>
         {loading ? (
           <div className="flex justify-center py-16">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />

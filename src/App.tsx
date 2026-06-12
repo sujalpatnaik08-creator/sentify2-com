@@ -12,6 +12,7 @@ import ResetPassword from "./pages/ResetPassword.tsx";
 import Downloads from "./pages/Downloads.tsx";
 import Artist from "./pages/Artist.tsx";
 import History from "./pages/History.tsx";
+import Moods from "./pages/Moods.tsx";
 import { AuthProvider } from "./contexts/AuthContext";
 import { PlayerProvider } from "./contexts/PlayerContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -48,6 +49,7 @@ const App = () => (
                 <Route path="/" element={<Public><Home /></Public>} />
                 {/* Everything else requires sign-in */}
                 <Route path="/search" element={<Protected><Search /></Protected>} />
+                <Route path="/moods" element={<Protected><Moods /></Protected>} />
                 <Route path="/artist/:id" element={<Protected><Artist /></Protected>} />
                 <Route path="/downloads" element={<Protected><Downloads /></Protected>} />
                 <Route path="/history" element={<Protected><History /></Protected>} />
