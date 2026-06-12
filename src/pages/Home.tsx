@@ -2,11 +2,9 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { ChevronLeft, ChevronRight, Play, Headphones, Sparkles } from "lucide-react";
-import { MoodFilter } from "@/components/MoodFilter";
 import { TrackCard } from "@/components/TrackCard";
-import { topTracks, tracksByTag } from "@/lib/music-api";
-import type { Mood, Track } from "@/types/music";
-import { MOODS } from "@/types/music";
+import { topTracks } from "@/lib/music-api";
+import type { Track } from "@/types/music";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -37,21 +35,17 @@ const HERO_SLIDES = [
 const Home = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [mood, setMood] = useState<Mood | null>(null);
   const [tracks, setTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(true);
   const [slide, setSlide] = useState(0);
 
   useEffect(() => {
     setLoading(true);
-    const fetcher = mood
-      ? tracksByTag(MOODS.find((m) => m.id === mood)!.tag, 24)
-      : topTracks(24);
-    fetcher
+    topTracks(24)
       .then(setTracks)
       .catch(() => setTracks([]))
       .finally(() => setLoading(false));
-  }, [mood]);
+  }, []);
 
   // Auto-rotate hero
   useEffect(() => {
