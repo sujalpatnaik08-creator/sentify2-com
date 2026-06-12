@@ -489,27 +489,6 @@ const HistoryView = ({
           </div>
         </section>
       )}
-      {recent.length > 0 && (
-        <section>
-          <h2 className="text-xl font-bold mb-3">Recently played</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {recent.slice(0, 18).map((t) => (
-              <button
-                key={t.id}
-                onClick={() => onSearch(`${t.title} ${t.artist}`)}
-                className="flex flex-col gap-2 p-2 rounded-lg hover:bg-card/60 transition-colors text-left"
-              >
-                <img src={t.artwork} alt={t.title} className="w-full aspect-square rounded-md object-cover shadow"
-                  onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")} />
-                <div className="min-w-0">
-                  <div className="text-sm font-semibold truncate">{t.title}</div>
-                  <div className="text-xs text-muted-foreground truncate">{t.artist}</div>
-                </div>
-              </button>
-            ))}
-          </div>
-        </section>
-      )}
     </div>
   );
 };

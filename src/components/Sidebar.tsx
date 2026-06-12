@@ -11,6 +11,7 @@ import {
   PlayCircle,
   Heart,
   Download,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,6 +22,7 @@ type Item = { to: string; icon: typeof Music; label: string };
 const main: Item[] = [
   { to: "/", icon: Home, label: "Home" },
   { to: "/search", icon: Search, label: "Search" },
+  { to: "/moods", icon: Sparkles, label: "Moods" },
   { to: "/library", icon: Library, label: "Your Library" },
   { to: "/downloads", icon: Download, label: "Downloads" },
 ];
