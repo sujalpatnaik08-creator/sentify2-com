@@ -11,6 +11,7 @@ import Auth from "./pages/Auth.tsx";
 import ResetPassword from "./pages/ResetPassword.tsx";
 import Downloads from "./pages/Downloads.tsx";
 import Artist from "./pages/Artist.tsx";
+import History from "./pages/History.tsx";
 import { AuthProvider } from "./contexts/AuthContext";
 import { PlayerProvider } from "./contexts/PlayerContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -49,6 +50,7 @@ const App = () => (
                 <Route path="/search" element={<Protected><Search /></Protected>} />
                 <Route path="/artist/:id" element={<Protected><Artist /></Protected>} />
                 <Route path="/downloads" element={<Protected><Downloads /></Protected>} />
+                <Route path="/history" element={<Protected><History /></Protected>} />
                 <Route path="/library" element={<Protected><Library /></Protected>} />
                 <Route path="*" element={<NotFound />} />
               </Routes>

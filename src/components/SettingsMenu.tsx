@@ -529,7 +529,7 @@ const SectionPanel = ({
           <Button
             variant="ghost"
             className="w-full justify-start h-10 mt-2"
-            onClick={() => { closeSheet(); navigate("/library?tab=history"); }}
+            onClick={() => { closeSheet(); navigate("/history"); }}
           >
             View search history
           </Button>
