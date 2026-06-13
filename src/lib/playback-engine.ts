@@ -536,8 +536,10 @@ class PlaybackEngine {
       const remaining = (a.duration || 0) - a.currentTime;
       const xfade = s.crossfadeSec;
 
-      // Prebuffer next track ~12s before end (gapless requirement)
-      if (!this.prebufferStarted && remaining < 14 && remaining > 0) {
+      // Predictive prebuffer — start fetching the next track ~30s before end
+      // so playback can start in well under 200ms when the user (or auto-next)
+      // moves forward.
+      if (!this.prebufferStarted && remaining < 30 && remaining > 0) {
         this.prebufferStarted = true;
         this.prebufferNext();
       }
