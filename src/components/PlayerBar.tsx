@@ -166,7 +166,7 @@ export const PlayerBar = ({ onToggleLyrics, onToggleQueue, onToggleMini, onOpenN
               aria-label="Play in order"
               title="Play in order"
             >
-              <ListMusic className="w-4 h-4" />
+              <ListVideo className="w-4 h-4" />
             </Button>
             <Button
               variant="ghost"
