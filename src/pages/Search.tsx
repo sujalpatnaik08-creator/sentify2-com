@@ -52,7 +52,7 @@ import {
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
 import { X, WifiOff, History as HistoryIcon, Trash2 } from "lucide-react";
-import { HumToSearch } from "@/components/HumToSearch";
+
 
 const SUGGESTIONS = ["Daylight", "Arijit Singh", "Coldplay", "Lo-fi", "Taylor Swift", "Khuda Jaane"];
 // Spotify search tab order: All, Songs, Artists, Albums, Playlists, Profiles
@@ -440,7 +440,8 @@ const Search = () => {
   // ---- Renderers ----
 
   const renderTracksTable = (list: Track[]) => (
-    <div className="overflow-x-auto">
+    <div className="relative overflow-x-auto rounded-2xl border border-primary/30 bg-card/40 backdrop-blur-sm shadow-[0_0_24px_-6px_hsl(var(--primary)/0.45),0_0_60px_-20px_hsl(var(--primary)/0.35)] transition-all">
+
       <table className="w-full text-sm">
         <thead>
           <tr className="text-muted-foreground border-b border-border/50 text-left">
@@ -1122,10 +1123,7 @@ const SearchEmptyState = () => {
   };
   return (
     <div className="space-y-8 animate-fade-in">
-      <section>
-        <h2 className="text-xl md:text-2xl font-bold mb-3">Identify a song</h2>
-        <HumToSearch />
-      </section>
+
 
       <section>
         <div className="flex items-center justify-between mb-3">

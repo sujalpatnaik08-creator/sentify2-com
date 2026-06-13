@@ -10,13 +10,15 @@ import {
   Repeat1,
   Volume2,
   VolumeX,
-  Mic2,
-  ListMusic,
+  MicVocal,
+  ListVideo,
   ChevronUp,
+  PictureInPicture2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useRef, useState } from "react";
+
 
 const fmt = (s: number) => {
   if (!isFinite(s) || s < 0) return "0:00";
@@ -28,12 +30,15 @@ const fmt = (s: number) => {
 interface PlayerBarProps {
   onToggleLyrics: () => void;
   onToggleQueue: () => void;
+  onToggleMini: () => void;
   onOpenNowPlaying: () => void;
   showLyrics: boolean;
   showQueue: boolean;
+  showMini: boolean;
 }
 
-export const PlayerBar = ({ onToggleLyrics, onToggleQueue, onOpenNowPlaying, showLyrics, showQueue }: PlayerBarProps) => {
+export const PlayerBar = ({ onToggleLyrics, onToggleQueue, onToggleMini, onOpenNowPlaying, showLyrics, showQueue, showMini }: PlayerBarProps) => {
+
   const {
     current,
     isPlaying,
@@ -65,10 +70,11 @@ export const PlayerBar = ({ onToggleLyrics, onToggleQueue, onOpenNowPlaying, sho
 
   return (
     <footer
-      className="fixed bottom-0 left-0 right-0 z-50 glass border-t border-border/50 px-4 py-3"
+      className="fixed bottom-0 left-0 right-0 z-50 glass border-t border-border/50 px-4 py-3 transition-all duration-300 animate-fade-in"
       onTouchStart={onBarTouchStart}
       onTouchEnd={onBarTouchEnd}
     >
+
       <div className="grid grid-cols-3 items-center gap-4">
         {/* Track info */}
         <div className="flex items-center gap-3 min-w-0">
@@ -160,7 +166,7 @@ export const PlayerBar = ({ onToggleLyrics, onToggleQueue, onOpenNowPlaying, sho
               aria-label="Play in order"
               title="Play in order"
             >
-              <ListMusic className="w-4 h-4" />
+              <ListVideo className="w-4 h-4" />
             </Button>
             <Button
               variant="ghost"
@@ -178,20 +184,34 @@ export const PlayerBar = ({ onToggleLyrics, onToggleQueue, onOpenNowPlaying, sho
             variant="ghost"
             size="icon"
             onClick={onToggleLyrics}
-            className={cn("h-8 w-8", showLyrics && "text-primary")}
+            className={cn("h-8 w-8 transition-colors", showLyrics && "text-primary")}
             aria-label="Lyrics"
+            title="Lyrics"
           >
-            <Mic2 className="w-4 h-4" />
+            <MicVocal className="w-4 h-4" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
             onClick={onToggleQueue}
-            className={cn("h-8 w-8", showQueue && "text-primary")}
+            className={cn("h-8 w-8 transition-colors", showQueue && "text-primary")}
             aria-label="Queue"
+            title="Queue"
           >
-            <ListMusic className="w-4 h-4" />
+            <ListVideo className="w-4 h-4" />
           </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onToggleMini}
+            className={cn("h-8 w-8 transition-colors", showMini && "text-primary")}
+            aria-label="Mini player"
+            title="Mini player (picture-in-picture)"
+          >
+            <PictureInPicture2 className="w-4 h-4" />
+          </Button>
+
+
 
           {/* Playback settings moved to the unified Settings menu in the top bar. */}
 

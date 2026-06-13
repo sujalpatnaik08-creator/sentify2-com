@@ -2,14 +2,11 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { ChevronLeft, ChevronRight, Play, Headphones, Sparkles } from "lucide-react";
-import { TrackCard } from "@/components/TrackCard";
-import { topTracks } from "@/lib/music-api";
-import type { Track } from "@/types/music";
-import { Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import heroHeadphones from "@/assets/hero-headphones.jpg";
+
 
 const HERO_SLIDES = [
   {
@@ -35,17 +32,7 @@ const HERO_SLIDES = [
 const Home = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [tracks, setTracks] = useState<Track[]>([]);
-  const [loading, setLoading] = useState(true);
   const [slide, setSlide] = useState(0);
-
-  useEffect(() => {
-    setLoading(true);
-    topTracks(24)
-      .then(setTracks)
-      .catch(() => setTracks([]))
-      .finally(() => setLoading(false));
-  }, []);
 
   // Auto-rotate hero
   useEffect(() => {
@@ -55,6 +42,8 @@ const Home = () => {
 
   const goPrev = () => setSlide((s) => (s - 1 + HERO_SLIDES.length) % HERO_SLIDES.length);
   const goNext = () => setSlide((s) => (s + 1) % HERO_SLIDES.length);
+
+
 
   const current = HERO_SLIDES[slide];
 
@@ -167,26 +156,11 @@ const Home = () => {
         </div>
       </section>
 
-
-      {/* === TRACKS ========================================================== */}
-      <section className="px-6 md:px-10 py-8 max-w-7xl mx-auto">
-        <h2 className="text-2xl font-bold mb-4">Trending now</h2>
-        {loading ? (
-          <div className="flex justify-center py-16">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 animate-fade-in">
-            {tracks.map((t) => (
-              <TrackCard key={t.id} track={t} queue={tracks} />
-            ))}
-          </div>
-        )}
-      </section>
     </div>
     </>
   );
 };
+
 
 const FeatureChip = ({ icon, title, body }: { icon: React.ReactNode; title: string; body: string }) => (
   <div className="flex items-center gap-3 p-3 rounded-xl bg-card/50 border border-border/40">
