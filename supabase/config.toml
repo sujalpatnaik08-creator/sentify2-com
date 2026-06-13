@@ -1,16 +1,11 @@
 project_id = "rumkfzvloeazpvyomhww"
 
 # Edge function auth posture:
-# - yt-search stays public (verify_jwt = false) because the unauthenticated
-#   Home page surfaces top tracks/mood rows for guests. Abuse is mitigated by
-#   the in-function IP rate limiter + cache.
-# - translate-lyrics and recognize-song require a valid Supabase JWT so paid
-#   AI / AudD credits can only be spent by signed-in Sentify users.
+# - yt-search stays public (verify_jwt = false) for guest Home browsing.
+# - translate-lyrics requires a valid Supabase JWT so paid AI credits can only
+#   be spent by signed-in Sentify users.
 [functions.yt-search]
 verify_jwt = false
 
 [functions.translate-lyrics]
-verify_jwt = true
-
-[functions.recognize-song]
 verify_jwt = true
