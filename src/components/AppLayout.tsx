@@ -6,11 +6,13 @@ import { QueuePanel } from "./QueuePanel";
 import { TopBar } from "./TopBar";
 import { NowPlayingView } from "./NowPlayingView";
 import { VoiceAssistant } from "./VoiceAssistant";
+import { MiniPlayer } from "./MiniPlayer";
 import { useAuth } from "@/contexts/AuthContext";
 
 export const AppLayout = ({ children }: { children: ReactNode }) => {
   const [showLyrics, setShowLyrics] = useState(false);
   const [showQueue, setShowQueue] = useState(false);
+  const [showMini, setShowMini] = useState(false);
   const [showNowPlaying, setShowNowPlaying] = useState(false);
   const { user } = useAuth();
   const signedIn = !!user;
@@ -26,10 +28,11 @@ export const AppLayout = ({ children }: { children: ReactNode }) => {
         }
       >
         <TopBar />
-        <main className="flex-1">{children}</main>
+        <main className="flex-1 animate-fade-in">{children}</main>
       </div>
       {signedIn && showLyrics && <LyricsPanel onClose={() => setShowLyrics(false)} />}
       {signedIn && showQueue && <QueuePanel onClose={() => setShowQueue(false)} />}
+      {signedIn && showMini && <MiniPlayer onClose={() => setShowMini(false)} />}
       {signedIn && (
         <PlayerBar
           onToggleLyrics={() => {
@@ -40,9 +43,11 @@ export const AppLayout = ({ children }: { children: ReactNode }) => {
             setShowQueue((v) => !v);
             setShowLyrics(false);
           }}
+          onToggleMini={() => setShowMini((v) => !v)}
           onOpenNowPlaying={() => setShowNowPlaying(true)}
           showLyrics={showLyrics}
           showQueue={showQueue}
+          showMini={showMini}
         />
       )}
       {signedIn && (
