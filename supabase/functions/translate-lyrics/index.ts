@@ -64,11 +64,6 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-      return new Response(JSON.stringify({ error: "Missing 'text'" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
     if (!targetLanguage || typeof targetLanguage !== "string") {
       return new Response(
         JSON.stringify({ error: "Missing 'targetLanguage'" }),
