@@ -67,7 +67,7 @@ const History = () => {
           <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mb-4 text-muted-foreground">
             <HistoryIcon className="w-8 h-8" />
           </div>
-          <h3 className="text-xl font-semibold mb-2">No search history yet</h3>
+          <h2 className="text-xl font-semibold mb-2">No search history yet</h2>
           <p className="text-muted-foreground mb-6 max-w-md">
             When you search for songs, artists or albums, your recent queries will appear here.
           </p>
