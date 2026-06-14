@@ -107,7 +107,7 @@ const Downloads = () => {
           <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mb-4 text-muted-foreground">
             <Download className="w-8 h-8" />
           </div>
-          <h3 className="text-xl font-semibold mb-2">No downloads yet</h3>
+          <h2 className="text-xl font-semibold mb-2">No downloads yet</h2>
           <p className="text-muted-foreground mb-6 max-w-md">
             On the Search or Library tabs, tap the download icon next to any
             Audius track to save it for offline playback.

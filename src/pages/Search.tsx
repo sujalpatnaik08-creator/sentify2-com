@@ -780,6 +780,7 @@ const Search = () => {
         <meta property="og:type" content="website" />
       </Helmet>
       <div className="px-6 md:px-10 py-8 max-w-7xl mx-auto">
+      <h1 className="sr-only">Search Music and Artists</h1>
       {/* Header row with troubleshooting toggle */}
       {q && (
         <div className="flex items-center justify-between gap-3 mb-3">
