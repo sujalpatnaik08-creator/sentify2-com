@@ -81,11 +81,32 @@ const Auth = () => {
     const { error } = await supabase.auth.signInWithOtp({ phone: p });
     setBusy(false);
     if (error) {
-      toast.error(
-        error.message.toLowerCase().includes("provider")
-          ? "Phone sign-in isn't enabled yet. Ask the admin to enable a phone provider."
-          : error.message,
-      );
+      const msg = (error.message || "").toLowerCase();
+      const code = (error as { code?: string }).code?.toLowerCase() ?? "";
+      const status = (error as { status?: number }).status ?? 0;
+
+      // Precise detection: Supabase returns 422 + "provider is not enabled" / "sms_provider_disabled"
+      // when no SMS provider is wired up in the project's auth config.
+      const providerDisabled =
+        code.includes("sms_provider_disabled") ||
+        code.includes("provider_disabled") ||
+        msg.includes("provider is not enabled") ||
+        msg.includes("sms provider") ||
+        msg.includes("phone provider") ||
+        (status === 422 && msg.includes("provider"));
+
+      if (providerDisabled) {
+        toast.error(
+          "Phone sign-in isn't enabled yet. Enable an SMS provider in Cloud → Users → Auth Settings → Phone, then try again.",
+          { duration: 8000 },
+        );
+      } else if (code.includes("over_email_send_rate_limit") || code.includes("over_sms_send_rate_limit") || msg.includes("rate limit")) {
+        toast.error("Too many code requests. Wait a minute before trying again.");
+      } else if (msg.includes("invalid") && msg.includes("phone")) {
+        toast.error("That phone number isn't valid. Use E.164 format, e.g. +15558675309.");
+      } else {
+        toast.error(error.message || "Couldn't send the code. Please try again.");
+      }
       return;
     }
     setOtpSent(true);
