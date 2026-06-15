@@ -7,6 +7,8 @@ import { forwardRef, useEffect, useState } from "react";
 import { getVote, setVote } from "@/lib/taste-profile";
 import { invalidateTasteCache } from "@/lib/music-api";
 import { toast } from "@/hooks/use-toast";
+import { AnalysisBadges } from "@/components/AnalysisBadges";
+import { useAnalysis } from "@/lib/musicologist";
 
 interface TrackCardProps {
   track: Track;
@@ -18,6 +20,9 @@ export const TrackCard = forwardRef<HTMLDivElement, TrackCardProps>(({ track, qu
   const isCurrent = current?.id === track.id;
   const showPause = isCurrent && isPlaying;
   const [vote, setVoteState] = useState<"up" | "down" | null>(() => getVote(track.id));
+  const analysis = useAnalysis(track.id);
+
+
 
   useEffect(() => {
     const onChange = () => setVoteState(getVote(track.id));
@@ -62,6 +67,7 @@ export const TrackCard = forwardRef<HTMLDivElement, TrackCardProps>(({ track, qu
       </div>
       <div className="space-y-1">
         <h3 className={cn("font-semibold truncate", isCurrent && "text-primary")}>{track.title}</h3>
+        {analysis && <AnalysisBadges analysis={analysis} compact className="mt-1" />}
       </div>
 
       {/* Taste profile thumbs */}
