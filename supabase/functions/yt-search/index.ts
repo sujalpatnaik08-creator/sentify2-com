@@ -334,8 +334,9 @@ Deno.serve(async (req) => {
       },
     });
   } catch (err) {
+    console.error("yt-search error", err);
     return new Response(
-      JSON.stringify({ items: [], error: (err as Error).message }),
+      JSON.stringify({ items: [], error: "Search temporarily unavailable" }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
