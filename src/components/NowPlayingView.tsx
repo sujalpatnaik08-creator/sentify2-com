@@ -128,6 +128,9 @@ export const NowPlayingView = ({ open, onOpenChange }: Props) => {
     cycleRepeat,
   } = usePlayer();
 
+  const analysis = useAnalysis(current?.id);
+
+
   const [tab, setTab] = useState<"lyrics" | "artist" | "dna">("lyrics");
   const [lyricsExpanded, setLyricsExpanded] = useState(false);
   const [liked, setLiked] = useState(false);
