@@ -54,6 +54,9 @@ import { QueuePanel } from "@/components/QueuePanel";
 import { getDefaultLyricsLang, getAlwaysTranslate, setDefaultLyricsLang, setAlwaysTranslate } from "@/lib/user-prefs";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { AnalysisBadges } from "@/components/AnalysisBadges";
+import { GoldenMinuteButton } from "@/components/GoldenMinuteButton";
+import { useAnalysis } from "@/lib/musicologist";
 
 const fmt = (s: number) => {
   if (!isFinite(s) || s < 0) return "0:00";
@@ -481,6 +484,10 @@ export const NowPlayingView = ({ open, onOpenChange }: Props) => {
               <div className="mt-5 text-center">
                 <h1 className="text-xl sm:text-2xl font-bold truncate">{current.title}</h1>
                 <p className="text-sm text-muted-foreground truncate mt-0.5">{current.artist}</p>
+                <div className="mt-3 flex flex-col items-center gap-2">
+                  <AnalysisBadges analysis={analysis} />
+                  <GoldenMinuteButton trackId={current.id} />
+                </div>
               </div>
 
               {/* Seek bar */}
