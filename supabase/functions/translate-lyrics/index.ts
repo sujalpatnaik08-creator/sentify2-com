@@ -74,6 +74,25 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Allowlist to prevent prompt injection via targetLanguage.
+    const ALLOWED_LANGS = new Set([
+      "English", "Hindi", "Hinglish", "Spanish", "French", "German", "Italian",
+      "Portuguese", "Russian", "Japanese", "Korean", "Chinese", "Arabic",
+      "Bengali", "Tamil", "Telugu", "Marathi", "Gujarati", "Punjabi", "Urdu",
+      "Malayalam", "Kannada", "Odia", "Turkish", "Dutch", "Polish", "Swedish",
+      "Indonesian", "Vietnamese", "Thai",
+    ]);
+    const normalizedLang = targetLanguage.trim();
+    if (normalizedLang.length > 30 || !ALLOWED_LANGS.has(normalizedLang)) {
+      return new Response(
+        JSON.stringify({ error: "Unsupported language" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
     const trimmed = text.slice(0, MAX_CHARS);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -87,10 +106,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    const isHinglish = /^hinglish$/i.test(targetLanguage);
+    const isHinglish = /^hinglish$/i.test(normalizedLang);
     const langInstruction = isHinglish
       ? "Translate the user's lyrics into Hinglish — that is, Hindi written in the Latin/Roman alphabet (NOT Devanagari). Use natural, conversational spelling that Hindi speakers commonly use online (e.g. 'tum mere paas ho')."
-      : `Translate the user's lyrics into ${targetLanguage}.`;
+      : `Translate the user's lyrics into ${normalizedLang}.`;
     const sys =
       `You are a professional song-lyrics translator. ${langInstruction}` +
       (romanize && !isHinglish
@@ -153,7 +172,7 @@ Deno.serve(async (req) => {
   } catch (e) {
     console.error("translate-lyrics error", e);
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown" }),
+      JSON.stringify({ error: "An internal error occurred" }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
