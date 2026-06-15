@@ -13,6 +13,8 @@ import Downloads from "./pages/Downloads.tsx";
 import Artist from "./pages/Artist.tsx";
 import History from "./pages/History.tsx";
 import Moods from "./pages/Moods.tsx";
+import Upload from "./pages/Upload.tsx";
+import SmartPlaylists from "./pages/SmartPlaylists.tsx";
 import { AuthProvider } from "./contexts/AuthContext";
 import { PlayerProvider } from "./contexts/PlayerContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -54,6 +56,8 @@ const App = () => (
                 <Route path="/downloads" element={<Protected><Downloads /></Protected>} />
                 <Route path="/history" element={<Protected><History /></Protected>} />
                 <Route path="/library" element={<Protected><Library /></Protected>} />
+                <Route path="/upload" element={<Protected><Upload /></Protected>} />
+                <Route path="/smart-playlists" element={<Protected><SmartPlaylists /></Protected>} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
