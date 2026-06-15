@@ -140,6 +140,9 @@ const Auth = () => {
         <title>{mode === "signup" ? "Sign Up" : "Log In"} — Sentify</title>
         <meta name="description" content="Log in or sign up to Sentify for ad-free music streaming, synced lyrics, and your personal library." />
         <link rel="canonical" href="/auth" />
+        <meta property="og:title" content={`${mode === "signup" ? "Sign Up" : "Log In"} — Sentify`} />
+        <meta property="og:description" content="Log in or sign up to Sentify for ad-free music streaming, synced lyrics, and your personal library." />
+        <meta property="og:url" content="/auth" />
       </Helmet>
 
       {/* Spotify-flavored ambient glow */}

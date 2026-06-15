@@ -43,6 +43,9 @@ const History = () => {
         <title>Search History — Sentify</title>
         <meta name="description" content="View, re-run, or clear your full Sentify search history. Search history is stored only on your device." />
         <link rel="canonical" href="/history" />
+        <meta property="og:title" content="Search History — Sentify" />
+        <meta property="og:description" content="View, re-run, or clear your full Sentify search history. Search history is stored only on your device." />
+        <meta property="og:url" content="/history" />
       </Helmet>
 
       <div className="flex items-start justify-between gap-4 flex-wrap mb-6">

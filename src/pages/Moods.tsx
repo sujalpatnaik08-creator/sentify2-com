@@ -29,6 +29,9 @@ const Moods = () => {
         <title>Moods — Music for Every Feeling on Sentify</title>
         <meta name="description" content="Pick a mood and stream curated, full-length songs — happy, chill, focus, workout, sad, party, romance, sleep." />
         <link rel="canonical" href="/moods" />
+        <meta property="og:title" content="Moods — Music for Every Feeling on Sentify" />
+        <meta property="og:description" content="Pick a mood and stream curated, full-length songs — happy, chill, focus, workout, sad, party, romance, sleep." />
+        <meta property="og:url" content="/moods" />
       </Helmet>
       <div className="px-6 md:px-10 py-8 max-w-7xl mx-auto">
         <h1 className="text-3xl md:text-4xl font-black mb-1">Moods</h1>
