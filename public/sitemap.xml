@@ -16,13 +16,28 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://sentify-com.lovable.app/moods</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://sentify-com.lovable.app/downloads</loc>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
+    <loc>https://sentify-com.lovable.app/history</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
     <loc>https://sentify-com.lovable.app/auth</loc>
     <changefreq>monthly</changefreq>
     <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://sentify-com.lovable.app/reset-password</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.2</priority>
   </url>
 </urlset>
