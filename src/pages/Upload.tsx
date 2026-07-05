@@ -14,11 +14,15 @@ import {
   getUpload,
   listUploads,
   putUpload,
+  getAnalysis,
+  putAnalysis,
 } from "@/lib/analysis-store";
 import { analyzeTrack, useAnalysis } from "@/lib/musicologist";
 import { AnalysisBadges } from "@/components/AnalysisBadges";
 import type { LocalUpload } from "@/types/analysis";
 import type { Track } from "@/types/music";
+import { Input } from "@/components/ui/input";
+import { Sparkles, Check } from "lucide-react";
 
 const MAX_FILE_BYTES = 30 * 1024 * 1024; // 30 MB
 
