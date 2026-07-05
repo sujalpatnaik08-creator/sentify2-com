@@ -53,6 +53,35 @@ const Artist = () => {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(true);
   const [favs, setFavs] = useState<FavArtist[]>(getFavoriteArtists());
+  const [tab, setTab] = useState<"tracks" | "about">("tracks");
+  const [artistInfo, setArtistInfo] = useState<ArtistInfo | null>(null);
+  const [artistInfoLoading, setArtistInfoLoading] = useState(false);
+  const [customBio, setCustomBio] = useState<string>(getArtistBio(id));
+  const [bioDraft, setBioDraft] = useState<string>(customBio);
+  const [editingBio, setEditingBio] = useState(false);
+
+  useEffect(() => {
+    const b = getArtistBio(id);
+    setCustomBio(b);
+    setBioDraft(b);
+  }, [id]);
+
+  useEffect(() => {
+    if (tab !== "about" || !displayName) return;
+    let cancelled = false;
+    setArtistInfoLoading(true);
+    getArtistInfo(displayName)
+      .then((info) => { if (!cancelled) setArtistInfo(info); })
+      .finally(() => { if (!cancelled) setArtistInfoLoading(false); });
+    return () => { cancelled = true; };
+  }, [tab, displayName]);
+
+  const saveBio = () => {
+    setArtistBio(id, bioDraft.trim());
+    setCustomBio(bioDraft.trim());
+    setEditingBio(false);
+    toast.success("Artist bio saved");
+  };
 
   const isFollowing = favs.some((a) => a.id === id);
 
