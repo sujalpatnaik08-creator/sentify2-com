@@ -189,6 +189,17 @@ ${lyrics ? `Lyrics:\n${lyrics}` : "Lyrics: (not available)"}`;
       goldenStartSec: goldStart,
       goldenEndSec: goldEnd,
       confidence: conf,
+      credits: Array.isArray(parsed.credits)
+        ? (parsed.credits as unknown[])
+            .filter((c): c is { role: unknown; name: unknown } => !!c && typeof c === "object")
+            .map((c) => ({
+              role: typeof c.role === "string" ? c.role.slice(0, 40) : "",
+              name: typeof c.name === "string" ? c.name.slice(0, 80) : "",
+            }))
+            .filter((c) => c.role && c.name)
+            .slice(0, 10)
+        : [],
+      canvasPrompt: typeof parsed.canvasPrompt === "string" ? parsed.canvasPrompt.slice(0, 240) : undefined,
     };
 
     return new Response(JSON.stringify(result), {
