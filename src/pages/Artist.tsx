@@ -369,6 +369,8 @@ const Artist = () => {
           </div>
         </section>
       )}
+        </>
+      )}
     </div>
   );
 };
