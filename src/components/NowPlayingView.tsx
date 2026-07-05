@@ -56,6 +56,8 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { AnalysisBadges } from "@/components/AnalysisBadges";
 import { GoldenMinuteButton } from "@/components/GoldenMinuteButton";
+import { CreditsPanel } from "@/components/CreditsPanel";
+import { NextInQueueStrip } from "@/components/NextInQueueStrip";
 import { useAnalysis } from "@/lib/musicologist";
 
 const fmt = (s: number) => {
