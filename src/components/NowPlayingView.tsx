@@ -580,11 +580,19 @@ export const NowPlayingView = ({ open, onOpenChange }: Props) => {
                 )}
 
                 {tab === "artist" && (
-                  <ArtistCard
-                    artist={current.artist}
-                    info={artistInfo}
-                    loading={artistLoading}
-                  />
+                  <div className="space-y-3">
+                    <ArtistCard
+                      artist={current.artist}
+                      info={artistInfo}
+                      loading={artistLoading}
+                    />
+                    <CreditsPanel
+                      trackId={current.id}
+                      fallbackArtist={current.artist}
+                      fallbackArtwork={current.artwork}
+                    />
+                    <NextInQueueStrip onOpenQueue={() => setQueueOpen(true)} />
+                  </div>
                 )}
 
                 {tab === "dna" && <SongDNA track={current} />}
