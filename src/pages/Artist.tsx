@@ -6,17 +6,31 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { Loader2, Play, Pause, UserPlus, UserMinus, ArrowLeft, Disc3 } from "lucide-react";
+import { Loader2, Play, Pause, UserPlus, UserMinus, ArrowLeft, Disc3, Info, Check, Pencil } from "lucide-react";
 import { searchAll } from "@/lib/music-api";
 import type { Track } from "@/types/music";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { getArtistInfo, type ArtistInfo } from "@/lib/artist-info";
 import {
   getFavoriteArtists,
   setFavoriteArtists,
   type FavArtist,
 } from "@/lib/user-prefs";
+
+const BIO_KEY = (id: string) => `sentify_artist_bio_${id}`;
+const getArtistBio = (id: string): string => {
+  try { return localStorage.getItem(BIO_KEY(id)) || ""; } catch { return ""; }
+};
+const setArtistBio = (id: string, bio: string) => {
+  try {
+    if (bio) localStorage.setItem(BIO_KEY(id), bio);
+    else localStorage.removeItem(BIO_KEY(id));
+  } catch { /* */ }
+};
 
 const fmt = (s: number) => {
   if (!s || !isFinite(s)) return "--:--";
