@@ -374,7 +374,13 @@ export const NowPlayingView = ({ open, onOpenChange }: Props) => {
 
   if (!current) return null;
 
-  const heroBg = artistInfo?.image || current.artwork;
+  // Canvas override (per-track setting from the music catalog) takes precedence
+  // over the artist image and artwork for the blurred backdrop.
+  const canvasImg =
+    analysis?.canvasOverride && /^https?:\/\//i.test(analysis.canvasOverride)
+      ? analysis.canvasOverride
+      : undefined;
+  const heroBg = canvasImg || artistInfo?.image || current.artwork;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
