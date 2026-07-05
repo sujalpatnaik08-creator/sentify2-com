@@ -129,6 +129,9 @@ export async function analyzeTrack(opts: AnalyzeOpts): Promise<AnalysisResult | 
   const source: AnalysisResult["source"] =
     aiVal && dspVal ? "hybrid" : aiVal ? "ai" : "dsp";
 
+  // Preserve any user-set canvas override across re-analysis.
+  const prev = opts.force ? await getAnalysis(opts.trackId) : undefined;
+
   const result: AnalysisResult = {
     trackId: opts.trackId,
     source,
@@ -149,6 +152,9 @@ export async function analyzeTrack(opts: AnalyzeOpts): Promise<AnalysisResult | 
     goldenStartSec: aiVal?.goldenStartSec,
     goldenEndSec: aiVal?.goldenEndSec,
     confidence: aiVal?.confidence,
+    credits: aiVal?.credits,
+    canvasPrompt: aiVal?.canvasPrompt,
+    canvasOverride: prev?.canvasOverride,
     analyzedAt: Date.now(),
   };
 
