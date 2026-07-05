@@ -238,34 +238,87 @@ const UploadRow = ({ upload, busy, onRefresh }: { upload: LocalUpload; busy: boo
     onRefresh();
   };
 
+  const [canvasOpen, setCanvasOpen] = useState(false);
+  const [canvasVal, setCanvasVal] = useState<string>("");
+  useEffect(() => {
+    if (analysis?.canvasOverride !== undefined) setCanvasVal(analysis.canvasOverride);
+    else if (analysis?.canvasPrompt) setCanvasVal(analysis.canvasPrompt);
+  }, [analysis?.canvasOverride, analysis?.canvasPrompt]);
+
+  const saveCanvas = async () => {
+    const existing = (await getAnalysis(upload.trackId)) ?? {
+      trackId: upload.trackId,
+      source: "ai" as const,
+      analyzedAt: Date.now(),
+    };
+    await putAnalysis({ ...existing, canvasOverride: canvasVal.trim() || undefined });
+    toast.success("Canvas updated");
+    setCanvasOpen(false);
+  };
+
   return (
-    <li className="bg-card/40 rounded-xl p-4 flex items-center gap-4">
-      <div className="w-12 h-12 rounded-md bg-muted flex items-center justify-center shrink-0">
-        <FileMusic className="w-6 h-6 text-muted-foreground" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="font-semibold truncate">{upload.title}</div>
-        <div className="text-xs text-muted-foreground truncate">{upload.artist}</div>
-        <div className="mt-2">
-          {busy ? (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Loader2 className="w-3 h-3 animate-spin" />
-              Analyzing…
-            </div>
+    <li className="bg-card/40 rounded-xl p-4 space-y-3">
+      <div className="flex items-center gap-4">
+        <div className="w-12 h-12 rounded-md bg-muted flex items-center justify-center shrink-0 overflow-hidden">
+          {analysis?.canvasOverride && /^https?:\/\//i.test(analysis.canvasOverride) ? (
+            <img src={analysis.canvasOverride} alt="" className="w-full h-full object-cover" />
           ) : (
-            <AnalysisBadges analysis={analysis} compact />
+            <FileMusic className="w-6 h-6 text-muted-foreground" />
           )}
         </div>
+        <div className="flex-1 min-w-0">
+          <div className="font-semibold truncate">{upload.title}</div>
+          <div className="text-xs text-muted-foreground truncate">{upload.artist}</div>
+          <div className="mt-2">
+            {busy ? (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                Analyzing…
+              </div>
+            ) : (
+              <AnalysisBadges analysis={analysis} compact />
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          <Button size="icon" variant="ghost" onClick={() => setCanvasOpen((v) => !v)} title="Canvas settings">
+            <Sparkles className={`w-4 h-4 ${analysis?.canvasOverride ? "text-primary" : ""}`} />
+          </Button>
+          <Button size="icon" variant="ghost" onClick={play} title="Play"><Play className="w-4 h-4" /></Button>
+          <Button size="icon" variant="ghost" onClick={reAnalyze} disabled={reAnalyzing} title="Re-analyze">
+            {reAnalyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+          </Button>
+          <Button size="icon" variant="ghost" onClick={remove} title="Remove">
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
-      <div className="flex items-center gap-1 shrink-0">
-        <Button size="icon" variant="ghost" onClick={play} title="Play"><Play className="w-4 h-4" /></Button>
-        <Button size="icon" variant="ghost" onClick={reAnalyze} disabled={reAnalyzing} title="Re-analyze">
-          {reAnalyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-        </Button>
-        <Button size="icon" variant="ghost" onClick={remove} title="Remove">
-          <Trash2 className="w-4 h-4" />
-        </Button>
-      </div>
+      {canvasOpen && (
+        <div className="rounded-lg border border-border/60 bg-background/60 p-3">
+          <label className="text-[11px] uppercase tracking-widest text-muted-foreground">
+            Canvas backdrop
+          </label>
+          <p className="text-xs text-muted-foreground mt-0.5 mb-2">
+            Paste an image URL for a looping visual, or a short mood prompt. Leave blank to use the AI-generated backdrop.
+          </p>
+          <div className="flex items-center gap-2">
+            <Input
+              value={canvasVal}
+              onChange={(e) => setCanvasVal(e.target.value)}
+              placeholder="https://…  or  'slow orange sunset waves'"
+              className="h-9 text-sm"
+            />
+            <Button size="sm" onClick={saveCanvas} className="h-9 gap-1">
+              <Check className="w-4 h-4" /> Save
+            </Button>
+          </div>
+          {analysis?.canvasPrompt && (
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              AI suggestion: <span className="italic">{analysis.canvasPrompt}</span>
+            </p>
+          )}
+        </div>
+      )}
     </li>
   );
 };
