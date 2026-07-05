@@ -17,6 +17,12 @@ export interface AnalysisResult {
   goldenStartSec?: number;
   goldenEndSec?: number;
   confidence?: number;   // 0–1
+  /** Credits derived from title / lyrics — role + name pairs. */
+  credits?: { role: string; name: string }[];
+  /** AI-generated visual mood prompt used for the looping Canvas backdrop. */
+  canvasPrompt?: string;
+  /** User-set canvas override (image URL or short text prompt) — takes precedence over `canvasPrompt`. */
+  canvasOverride?: string;
   analyzedAt: number;    // epoch ms
 }
 
