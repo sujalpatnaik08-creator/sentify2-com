@@ -213,6 +213,81 @@ const Artist = () => {
         </div>
       </section>
 
+      {/* Tabs */}
+      <div className="px-6 md:px-10 pt-4 max-w-7xl mx-auto">
+        <div className="inline-flex rounded-lg bg-muted/40 p-1 gap-1">
+          <button
+            onClick={() => setTab("tracks")}
+            className={cn(
+              "px-4 h-8 rounded-md text-sm font-medium transition-colors",
+              tab === "tracks" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            Top tracks
+          </button>
+          <button
+            onClick={() => setTab("about")}
+            className={cn(
+              "px-4 h-8 rounded-md text-sm font-medium transition-colors inline-flex items-center gap-1.5",
+              tab === "about" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <Info className="w-3.5 h-3.5" /> About
+          </button>
+        </div>
+      </div>
+
+      {tab === "about" ? (
+        <section className="px-6 md:px-10 py-8 max-w-3xl mx-auto space-y-4">
+          <div className="rounded-xl bg-card/60 border border-border/50 p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-bold">Artist bio</h2>
+              {!editingBio && (
+                <Button size="sm" variant="secondary" onClick={() => setEditingBio(true)} className="gap-1.5">
+                  <Pencil className="w-3.5 h-3.5" /> Edit
+                </Button>
+              )}
+            </div>
+            {editingBio ? (
+              <div className="space-y-3">
+                <Textarea
+                  value={bioDraft}
+                  onChange={(e) => setBioDraft(e.target.value)}
+                  placeholder={`Tell listeners about ${displayName}…`}
+                  className="min-h-40 text-sm leading-relaxed"
+                  maxLength={4000}
+                />
+                <div className="flex items-center justify-end gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => { setBioDraft(customBio); setEditingBio(false); }}>
+                    Cancel
+                  </Button>
+                  <Button size="sm" onClick={saveBio} className="gap-1.5">
+                    <Check className="w-4 h-4" /> Save bio
+                  </Button>
+                </div>
+              </div>
+            ) : customBio ? (
+              <p className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">{customBio}</p>
+            ) : artistInfoLoading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="w-4 h-4 animate-spin" /> Loading bio…
+              </div>
+            ) : artistInfo?.bio ? (
+              <>
+                <p className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">{artistInfo.bio}</p>
+                <p className="mt-3 text-[11px] uppercase tracking-widest text-muted-foreground">From Wikipedia</p>
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No bio yet. Click <span className="font-medium">Edit</span> to write one for {displayName}.
+              </p>
+            )}
+          </div>
+        </section>
+      ) : (
+        <>
+
+
       {/* Top tracks */}
       <section className="px-6 md:px-10 py-8 max-w-7xl mx-auto">
         <h2 className="text-2xl font-bold mb-4">Top tracks</h2>
