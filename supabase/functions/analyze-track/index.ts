@@ -90,17 +90,19 @@ Deno.serve(async (req) => {
     const sys = `You are an expert musicologist. Analyze the given song using its title, artist, and lyrics (if provided).
 Return ONLY a strict JSON object with these exact fields and types — no markdown, no commentary:
 {
-  "genre": string,                       // primary genre (e.g. "Pop", "Hindi Film", "Hip-Hop")
-  "subgenre": string,                    // more specific (e.g. "Synth-Pop", "Bollywood Romantic", "Boom Bap")
-  "mood": ${JSON.stringify([...MOODS])}, // pick ONE from this list that best matches
-  "bpmEstimate": number,                 // typical BPM for this song style, 40-220
-  "keyEstimate": string,                 // e.g. "C minor", "F# major"
-  "instruments": string[],               // 2-6 dominant instruments
-  "explicit": boolean,                   // true if lyrics or theme contains profanity/explicit content
-  "explicitReasons": string[],           // short reasons (empty if not explicit)
-  "goldenStartSec": number,              // start of the chorus / peak section
-  "goldenEndSec": number,                // end of the chorus / peak section
-  "confidence": number                   // 0-1, your overall confidence
+  "genre": string,
+  "subgenre": string,
+  "mood": ${JSON.stringify([...MOODS])},
+  "bpmEstimate": number,
+  "keyEstimate": string,
+  "instruments": string[],
+  "explicit": boolean,
+  "explicitReasons": string[],
+  "goldenStartSec": number,
+  "goldenEndSec": number,
+  "confidence": number,
+  "credits": [ { "role": string, "name": string } ],   // main artist, composer, lyricist, producer, featured — infer from title/artist string when possible
+  "canvasPrompt": string                                // 1 sentence describing a looping visual backdrop that matches the song's mood (e.g. "slow orange sunset waves rippling behind neon calligraphy")
 }
 The golden section should be 20-45 seconds long and fit within the duration ${durationSec || "unknown"}.
 If duration is unknown, use 45-90 for goldenStartSec and 75-130 for goldenEndSec.`;
@@ -187,6 +189,17 @@ ${lyrics ? `Lyrics:\n${lyrics}` : "Lyrics: (not available)"}`;
       goldenStartSec: goldStart,
       goldenEndSec: goldEnd,
       confidence: conf,
+      credits: Array.isArray(parsed.credits)
+        ? (parsed.credits as unknown[])
+            .filter((c): c is { role: unknown; name: unknown } => !!c && typeof c === "object")
+            .map((c) => ({
+              role: typeof c.role === "string" ? c.role.slice(0, 40) : "",
+              name: typeof c.name === "string" ? c.name.slice(0, 80) : "",
+            }))
+            .filter((c) => c.role && c.name)
+            .slice(0, 10)
+        : [],
+      canvasPrompt: typeof parsed.canvasPrompt === "string" ? parsed.canvasPrompt.slice(0, 240) : undefined,
     };
 
     return new Response(JSON.stringify(result), {

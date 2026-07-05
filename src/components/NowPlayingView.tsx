@@ -56,6 +56,8 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { AnalysisBadges } from "@/components/AnalysisBadges";
 import { GoldenMinuteButton } from "@/components/GoldenMinuteButton";
+import { CreditsPanel } from "@/components/CreditsPanel";
+import { NextInQueueStrip } from "@/components/NextInQueueStrip";
 import { useAnalysis } from "@/lib/musicologist";
 
 const fmt = (s: number) => {
@@ -372,7 +374,13 @@ export const NowPlayingView = ({ open, onOpenChange }: Props) => {
 
   if (!current) return null;
 
-  const heroBg = artistInfo?.image || current.artwork;
+  // Canvas override (per-track setting from the music catalog) takes precedence
+  // over the artist image and artwork for the blurred backdrop.
+  const canvasImg =
+    analysis?.canvasOverride && /^https?:\/\//i.test(analysis.canvasOverride)
+      ? analysis.canvasOverride
+      : undefined;
+  const heroBg = canvasImg || artistInfo?.image || current.artwork;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -580,11 +588,19 @@ export const NowPlayingView = ({ open, onOpenChange }: Props) => {
                 )}
 
                 {tab === "artist" && (
-                  <ArtistCard
-                    artist={current.artist}
-                    info={artistInfo}
-                    loading={artistLoading}
-                  />
+                  <div className="space-y-3">
+                    <ArtistCard
+                      artist={current.artist}
+                      info={artistInfo}
+                      loading={artistLoading}
+                    />
+                    <CreditsPanel
+                      trackId={current.id}
+                      fallbackArtist={current.artist}
+                      fallbackArtwork={current.artwork}
+                    />
+                    <NextInQueueStrip onOpenQueue={() => setQueueOpen(true)} />
+                  </div>
                 )}
 
                 {tab === "dna" && <SongDNA track={current} />}
