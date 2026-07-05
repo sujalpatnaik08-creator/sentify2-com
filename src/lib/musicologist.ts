@@ -72,6 +72,8 @@ interface AiAnalysis {
   goldenStartSec?: number;
   goldenEndSec?: number;
   confidence?: number;
+  credits?: { role: string; name: string }[];
+  canvasPrompt?: string;
   error?: string;
 }
 
