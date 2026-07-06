@@ -13,4 +13,4 @@ Allow: /
 User-agent: *
 Allow: /
 
-Sitemap: https://sentify-com.lovable.app/sitemap.xml
+Sitemap: https://sentify2-com.lovable.app/sitemap.xml
