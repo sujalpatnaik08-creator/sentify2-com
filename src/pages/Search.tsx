@@ -796,6 +796,7 @@ const Search = () => {
                 : "bg-secondary/60 text-muted-foreground border-border hover:text-foreground"
             )}
             aria-pressed={showDebug}
+            aria-label={showDebug ? "Hide music source diagnostics" : "Show music source diagnostics"}
           >
             <Bug className="w-3.5 h-3.5" />
             Troubleshoot

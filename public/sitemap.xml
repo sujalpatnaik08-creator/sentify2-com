@@ -1,42 +1,52 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://sentify-com.lovable.app/</loc>
+    <loc>https://sentify2-com.lovable.app/</loc>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://sentify-com.lovable.app/search</loc>
+    <loc>https://sentify2-com.lovable.app/search</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://sentify-com.lovable.app/library</loc>
+    <loc>https://sentify2-com.lovable.app/library</loc>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://sentify-com.lovable.app/moods</loc>
+    <loc>https://sentify2-com.lovable.app/moods</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://sentify-com.lovable.app/downloads</loc>
+    <loc>https://sentify2-com.lovable.app/smart-playlists</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://sentify2-com.lovable.app/upload</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://sentify2-com.lovable.app/downloads</loc>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://sentify-com.lovable.app/history</loc>
+    <loc>https://sentify2-com.lovable.app/history</loc>
     <changefreq>monthly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://sentify-com.lovable.app/auth</loc>
+    <loc>https://sentify2-com.lovable.app/auth</loc>
     <changefreq>monthly</changefreq>
     <priority>0.4</priority>
   </url>
   <url>
-    <loc>https://sentify-com.lovable.app/reset-password</loc>
+    <loc>https://sentify2-com.lovable.app/reset-password</loc>
     <changefreq>yearly</changefreq>
     <priority>0.2</priority>
   </url>
