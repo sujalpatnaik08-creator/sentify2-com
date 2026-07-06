@@ -159,6 +159,12 @@ export function clearSearchHistory() {
   localStorage.removeItem(K.history);
 }
 
+export function removeSearchHistory(query: string) {
+  const q = query.trim().toLowerCase();
+  const list = getSearchHistory().filter((x) => x.toLowerCase() !== q);
+  localStorage.setItem(K.history, JSON.stringify(list));
+}
+
 // ---------- recently played ----------
 
 export function addRecentlyPlayed(track: Track) {
