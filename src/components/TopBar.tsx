@@ -5,6 +5,7 @@ import {
   Search as SearchIcon,
   History,
   ArrowRight,
+  X,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
@@ -15,6 +16,7 @@ import {
   addSearchHistory,
   clearSearchHistory,
   getSearchHistory,
+  removeSearchHistory,
 } from "@/lib/user-prefs";
 import { useAuth } from "@/contexts/AuthContext";
 import { suggestQueries, cleanDisplayTitle } from "@/lib/music-api";
@@ -211,12 +213,12 @@ export const TopBar = () => {
               {suggestions.map((s, i) => {
                 const isHist = !q.trim() || getSearchHistory().some((h) => h.toLowerCase() === s.toLowerCase());
                 return (
-                  <li key={s + i}>
+                  <li key={s + i} className="relative group">
                     <button
                       type="button"
                       onMouseDown={(e) => { e.preventDefault(); pickSuggestion(s); }}
                       onMouseEnter={() => setActiveIdx(i)}
-                      className={`w-full text-left px-4 py-3 text-base font-medium flex items-center gap-3 transition-colors ${activeIdx === i ? "bg-accent text-accent-foreground" : "hover:bg-accent/60"}`}
+                      className={`w-full text-left pl-4 pr-11 py-3 text-base font-medium flex items-center gap-3 transition-colors ${activeIdx === i ? "bg-accent text-accent-foreground" : "hover:bg-accent/60"}`}
                     >
                       {isHist ? (
                         <History className="w-4 h-4 text-muted-foreground shrink-0" />
@@ -225,7 +227,24 @@ export const TopBar = () => {
                       )}
                       <span className="truncate">{cleanDisplayTitle(s)}</span>
                     </button>
+                    {isHist && (
+                      <button
+                        type="button"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          removeSearchHistory(s);
+                          setSuggestions((prev) => prev.filter((x) => x !== s));
+                        }}
+                        aria-label={`Remove ${s} from recent searches`}
+                        title="Remove from recent searches"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-background/80 transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
                   </li>
+
                 );
               })}
             </ul>
