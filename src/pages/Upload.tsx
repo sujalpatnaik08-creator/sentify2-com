@@ -281,14 +281,14 @@ const UploadRow = ({ upload, busy, onRefresh }: { upload: LocalUpload; busy: boo
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          <Button size="icon" variant="ghost" onClick={() => setCanvasOpen((v) => !v)} title="Canvas settings">
+          <Button size="icon" variant="ghost" onClick={() => setCanvasOpen((v) => !v)} title="Canvas settings" aria-label="Canvas settings">
             <Sparkles className={`w-4 h-4 ${analysis?.canvasOverride ? "text-primary" : ""}`} />
           </Button>
-          <Button size="icon" variant="ghost" onClick={play} title="Play"><Play className="w-4 h-4" /></Button>
-          <Button size="icon" variant="ghost" onClick={reAnalyze} disabled={reAnalyzing} title="Re-analyze">
+          <Button size="icon" variant="ghost" onClick={play} title="Play" aria-label={`Play ${upload.track.title}`}><Play className="w-4 h-4" /></Button>
+          <Button size="icon" variant="ghost" onClick={reAnalyze} disabled={reAnalyzing} title="Re-analyze" aria-label="Re-analyze track">
             {reAnalyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
           </Button>
-          <Button size="icon" variant="ghost" onClick={remove} title="Remove">
+          <Button size="icon" variant="ghost" onClick={remove} title="Remove" aria-label={`Remove ${upload.track.title}`}>
             <Trash2 className="w-4 h-4" />
           </Button>
         </div>
