@@ -5,6 +5,7 @@ import {
   Search as SearchIcon,
   History,
   ArrowRight,
+  X,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
@@ -15,6 +16,7 @@ import {
   addSearchHistory,
   clearSearchHistory,
   getSearchHistory,
+  removeSearchHistory,
 } from "@/lib/user-prefs";
 import { useAuth } from "@/contexts/AuthContext";
 import { suggestQueries, cleanDisplayTitle } from "@/lib/music-api";
