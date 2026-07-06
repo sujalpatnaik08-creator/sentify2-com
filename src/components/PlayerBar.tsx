@@ -14,10 +14,17 @@ import {
   ListVideo,
   ChevronUp,
   PictureInPicture2,
+  Heart,
+  Download,
+  Check,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { isLiked, toggleLikedTrack } from "@/lib/user-prefs";
+import { isDownloaded, downloadTrack } from "@/lib/offline-store";
+import { toast } from "@/hooks/use-toast";
 
 
 const fmt = (s: number) => {
@@ -56,7 +63,21 @@ export const PlayerBar = ({ onToggleLyrics, onToggleQueue, onToggleMini, onOpenN
     cycleRepeat,
   } = usePlayer();
   const [muted, setMuted] = useState(false);
+  const [liked, setLiked] = useState(false);
+  const [downloaded, setDownloaded] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const touchStartY = useRef<number | null>(null);
+
+  // Sync like/download state to the current track.
+  useEffect(() => {
+    if (!current) {
+      setLiked(false);
+      setDownloaded(false);
+      return;
+    }
+    setLiked(isLiked(current.id));
+    isDownloaded(current.id).then(setDownloaded).catch(() => setDownloaded(false));
+  }, [current]);
 
   const onBarTouchStart = (e: React.TouchEvent) => {
     touchStartY.current = e.touches[0].clientY;
@@ -68,6 +89,38 @@ export const PlayerBar = ({ onToggleLyrics, onToggleQueue, onToggleMini, onOpenN
     touchStartY.current = null;
   };
 
+  const onLike = () => {
+    if (!current) return;
+    const now = toggleLikedTrack(current);
+    setLiked(now);
+  };
+
+  const onDownload = async () => {
+    if (!current || downloading || downloaded) return;
+    if (current.source === "youtube") {
+      toast({
+        title: "Can't download",
+        description: "YouTube tracks can only be streamed live.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setDownloading(true);
+    try {
+      await downloadTrack(current);
+      setDownloaded(true);
+      toast({ title: "Saved for offline", description: current.title });
+    } catch (e) {
+      toast({
+        title: "Download failed",
+        description: (e as Error).message,
+        variant: "destructive",
+      });
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   return (
     <footer
       className="fixed bottom-0 left-0 right-0 z-50 glass border-t border-border/50 px-4 py-3 transition-all duration-300 animate-fade-in"
@@ -75,9 +128,9 @@ export const PlayerBar = ({ onToggleLyrics, onToggleQueue, onToggleMini, onOpenN
       onTouchEnd={onBarTouchEnd}
     >
 
-      <div className="grid grid-cols-3 items-center gap-4">
-        {/* Track info */}
-        <div className="flex items-center gap-3 min-w-0">
+      <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1.5fr)] items-center gap-4">
+        {/* Track info + like/download */}
+        <div className="flex items-center gap-2 min-w-0">
           {current ? (
             <>
               <button
@@ -100,12 +153,41 @@ export const PlayerBar = ({ onToggleLyrics, onToggleQueue, onToggleMini, onOpenN
               <button
                 type="button"
                 onClick={onOpenNowPlaying}
-                className="min-w-0 text-left hover:underline"
+                className="min-w-0 text-left hover:underline flex-1"
                 aria-label="Open Now Playing"
               >
                 <div className="font-semibold truncate text-sm">{current.title}</div>
                 <div className="text-xs text-muted-foreground truncate">{current.artist}</div>
               </button>
+              <div className="flex items-center gap-0.5 shrink-0">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onLike}
+                  className="h-8 w-8"
+                  aria-label={liked ? "Unlike" : "Like"}
+                  title={liked ? "Unlike" : "Like"}
+                >
+                  <Heart className={cn("w-4 h-4", liked && "fill-primary text-primary")} />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onDownload}
+                  disabled={downloading || downloaded}
+                  className={cn("h-8 w-8", downloaded && "text-primary")}
+                  aria-label={downloaded ? "Downloaded" : downloading ? "Downloading" : "Download"}
+                  title={downloaded ? "Downloaded" : downloading ? "Downloading…" : "Download"}
+                >
+                  {downloading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : downloaded ? (
+                    <Check className="w-4 h-4" />
+                  ) : (
+                    <Download className="w-4 h-4" />
+                  )}
+                </Button>
+              </div>
             </>
           ) : (
             <div className="text-sm text-muted-foreground">Pick a track to start listening</div>
@@ -130,8 +212,8 @@ export const PlayerBar = ({ onToggleLyrics, onToggleQueue, onToggleMini, onOpenN
               <SkipForward className="w-4 h-4 fill-current" />
             </Button>
           </div>
-          <div className="flex items-center gap-2 w-full max-w-xl">
-            <span className="text-xs text-muted-foreground tabular-nums w-10 text-right">{fmt(progress)}</span>
+          <div className="flex items-center gap-2 w-full max-w-2xl">
+            <span className="text-xs text-muted-foreground tabular-nums w-10 text-right shrink-0">{fmt(progress)}</span>
             <Slider
               value={[progress]}
               max={duration || 1}
@@ -140,14 +222,14 @@ export const PlayerBar = ({ onToggleLyrics, onToggleQueue, onToggleMini, onOpenN
               className="flex-1"
               aria-label="Seek"
             />
-            <span className="text-xs text-muted-foreground tabular-nums w-10">{fmt(duration)}</span>
+            <span className="text-xs text-muted-foreground tabular-nums w-10 shrink-0">{fmt(duration)}</span>
           </div>
         </div>
 
         {/* Right controls */}
-        <div className="flex items-center justify-end gap-2">
-          {/* Playback order controls (shuffle / repeat / orderly) — left of lyrics */}
-          <div className="flex items-center gap-1 mr-1 pr-2 border-r border-border/50">
+        <div className="flex items-center justify-end gap-1 flex-wrap">
+          {/* Playback order controls (shuffle / repeat / orderly) */}
+          <div className="flex items-center gap-0.5 mr-1 pr-2 border-r border-border/50">
             <Button
               variant="ghost"
               size="icon"
@@ -211,10 +293,6 @@ export const PlayerBar = ({ onToggleLyrics, onToggleQueue, onToggleMini, onOpenN
             <PictureInPicture2 className="w-4 h-4" />
           </Button>
 
-
-
-          {/* Playback settings moved to the unified Settings menu in the top bar. */}
-
           <Button
             variant="ghost"
             size="icon"
@@ -236,7 +314,7 @@ export const PlayerBar = ({ onToggleLyrics, onToggleQueue, onToggleMini, onOpenN
               setMuted(false);
               setVolume(v[0] / 100);
             }}
-            className="w-24"
+            className="w-20 shrink-0"
             aria-label="Volume"
           />
         </div>
