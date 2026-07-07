@@ -15,6 +15,7 @@ import History from "./pages/History.tsx";
 import Moods from "./pages/Moods.tsx";
 import Upload from "./pages/Upload.tsx";
 import SmartPlaylists from "./pages/SmartPlaylists.tsx";
+import GuideOfflineListening from "./pages/GuideOfflineListening.tsx";
 import { AuthProvider } from "./contexts/AuthContext";
 import { PlayerProvider } from "./contexts/PlayerContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -49,6 +50,7 @@ const App = () => (
                 <Route path="/reset-password" element={<ResetPassword />} />
                 {/* Home is the only public app page before sign-in */}
                 <Route path="/" element={<Public><Home /></Public>} />
+                <Route path="/guide/offline-listening" element={<Public><GuideOfflineListening /></Public>} />
                 {/* Everything else requires sign-in */}
                 <Route path="/search" element={<Protected><Search /></Protected>} />
                 <Route path="/moods" element={<Protected><Moods /></Protected>} />
