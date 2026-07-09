@@ -105,7 +105,7 @@ const Home = () => {
             key={`title-${slide}`}
             className="text-5xl sm:text-6xl md:text-8xl font-black text-white tracking-tight drop-shadow-2xl animate-fade-in leading-[0.95]"
           >
-            {current.title}
+            Sentify — Free Ad-Free Music for Every Mood
           </h1>
           <p
             key={`body-${slide}`}
