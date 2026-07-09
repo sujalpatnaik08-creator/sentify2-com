@@ -1,74 +1,74 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://sentify2-com.lovable.app/</loc>
+    <loc>https://sentify-com.lovable.app/</loc>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://sentify2-com.lovable.app/search</loc>
+    <loc>https://sentify-com.lovable.app/search</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://sentify2-com.lovable.app/library</loc>
+    <loc>https://sentify-com.lovable.app/library</loc>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://sentify2-com.lovable.app/moods</loc>
+    <loc>https://sentify-com.lovable.app/moods</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://sentify2-com.lovable.app/smart-playlists</loc>
+    <loc>https://sentify-com.lovable.app/smart-playlists</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://sentify2-com.lovable.app/guide/offline-listening</loc>
+    <loc>https://sentify-com.lovable.app/guide/offline-listening</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://sentify2-com.lovable.app/upload</loc>
+    <loc>https://sentify-com.lovable.app/upload</loc>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://sentify2-com.lovable.app/downloads</loc>
+    <loc>https://sentify-com.lovable.app/downloads</loc>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://sentify2-com.lovable.app/history</loc>
+    <loc>https://sentify-com.lovable.app/history</loc>
     <changefreq>monthly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://sentify2-com.lovable.app/auth</loc>
+    <loc>https://sentify-com.lovable.app/auth</loc>
     <changefreq>monthly</changefreq>
     <priority>0.4</priority>
   </url>
   <url>
-    <loc>https://sentify2-com.lovable.app/reset-password</loc>
+    <loc>https://sentify-com.lovable.app/reset-password</loc>
     <changefreq>yearly</changefreq>
     <priority>0.2</priority>
   </url>
   <!-- Curated popular artist pages (dynamic route /artist/:id — id is the artist name) -->
-  <url><loc>https://sentify2-com.lovable.app/artist/Taylor%20Swift</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://sentify2-com.lovable.app/artist/Drake</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://sentify2-com.lovable.app/artist/The%20Weeknd</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://sentify2-com.lovable.app/artist/Bad%20Bunny</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://sentify2-com.lovable.app/artist/Billie%20Eilish</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://sentify2-com.lovable.app/artist/Ed%20Sheeran</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://sentify2-com.lovable.app/artist/Ariana%20Grande</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://sentify2-com.lovable.app/artist/Dua%20Lipa</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://sentify2-com.lovable.app/artist/BTS</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://sentify2-com.lovable.app/artist/Beyonc%C3%A9</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://sentify2-com.lovable.app/artist/Rihanna</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://sentify2-com.lovable.app/artist/Coldplay</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://sentify2-com.lovable.app/artist/Arijit%20Singh</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://sentify2-com.lovable.app/artist/Post%20Malone</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://sentify2-com.lovable.app/artist/Kendrick%20Lamar</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://sentify-com.lovable.app/artist/Taylor%20Swift</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://sentify-com.lovable.app/artist/Drake</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://sentify-com.lovable.app/artist/The%20Weeknd</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://sentify-com.lovable.app/artist/Bad%20Bunny</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://sentify-com.lovable.app/artist/Billie%20Eilish</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://sentify-com.lovable.app/artist/Ed%20Sheeran</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://sentify-com.lovable.app/artist/Ariana%20Grande</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://sentify-com.lovable.app/artist/Dua%20Lipa</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://sentify-com.lovable.app/artist/BTS</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://sentify-com.lovable.app/artist/Beyonc%C3%A9</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://sentify-com.lovable.app/artist/Rihanna</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://sentify-com.lovable.app/artist/Coldplay</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://sentify-com.lovable.app/artist/Arijit%20Singh</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://sentify-com.lovable.app/artist/Post%20Malone</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://sentify-com.lovable.app/artist/Kendrick%20Lamar</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
 </urlset>
