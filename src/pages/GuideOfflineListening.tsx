@@ -102,7 +102,7 @@ const GuideOfflineListening = () => {
           ].map((f) => (
             <div key={f.title} className="rounded-2xl border border-border p-5 bg-card">
               <f.icon className="w-6 h-6 text-primary mb-3" />
-              <h3 className="font-bold mb-1">{f.title}</h3>
+              <h2 className="font-bold mb-1">{f.title}</h2>
               <p className="text-sm text-muted-foreground">{f.body}</p>
             </div>
           ))}
