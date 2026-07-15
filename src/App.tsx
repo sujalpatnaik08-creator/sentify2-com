@@ -16,6 +16,8 @@ import Moods from "./pages/Moods.tsx";
 import Upload from "./pages/Upload.tsx";
 import SmartPlaylists from "./pages/SmartPlaylists.tsx";
 import GuideOfflineListening from "./pages/GuideOfflineListening.tsx";
+import OAuthConsent from "./pages/OAuthConsent.tsx";
+
 import { AuthProvider } from "./contexts/AuthContext";
 import { PlayerProvider } from "./contexts/PlayerContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -48,6 +50,8 @@ const App = () => (
               <Routes>
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
+
                 {/* Home is the only public app page before sign-in */}
                 <Route path="/" element={<Public><Home /></Public>} />
                 <Route path="/guide/offline-listening" element={<Public><GuideOfflineListening /></Public>} />
