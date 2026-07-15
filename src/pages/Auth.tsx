@@ -4,17 +4,27 @@ import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
-import { Navigate } from "react-router-dom";
+import { Navigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Loader2, Music2, Mail, Phone, ArrowLeft } from "lucide-react";
 import { lovable } from "@/integrations/lovable";
 import { cn } from "@/lib/utils";
+
+// Only allow same-origin relative paths as the post-auth redirect target.
+function safeNext(next: string | null): string {
+  if (!next) return "/";
+  if (next.startsWith("/") && !next.startsWith("//")) return next;
+  return "/";
+}
+
 
 type Mode = "signin" | "signup" | "forgot";
 type Method = "email" | "phone";
 
 const Auth = () => {
   const { session, loading } = useAuth();
+  const [searchParams] = useSearchParams();
+  const nextPath = safeNext(searchParams.get("next"));
   const [mode, setMode] = useState<Mode>("signin");
   const [method, setMethod] = useState<Method>("email");
   const [email, setEmail] = useState("");
@@ -31,7 +41,8 @@ const Auth = () => {
       </div>
     );
   }
-  if (session) return <Navigate to="/" replace />;
+  if (session) return <Navigate to={nextPath} replace />;
+
 
   const submitEmail = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,7 +66,7 @@ const Auth = () => {
         email,
         password,
         options: {
-          emailRedirectTo: window.location.origin,
+          emailRedirectTo: `${window.location.origin}${nextPath}`,
           data: { username: email.split("@")[0] },
         },
       });
@@ -129,10 +140,11 @@ const Auth = () => {
 
   const googleSignIn = async () => {
     const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
+      redirect_uri: `${window.location.origin}${nextPath}`,
     });
     if (result.error) toast.error(result.error.message);
   };
+
 
   return (
     <div className="relative min-h-screen flex items-center justify-center p-4 bg-black overflow-hidden">
