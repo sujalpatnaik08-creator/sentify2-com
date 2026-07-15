@@ -66,7 +66,7 @@ const Auth = () => {
         email,
         password,
         options: {
-          emailRedirectTo: window.location.origin,
+          emailRedirectTo: `${window.location.origin}${nextPath}`,
           data: { username: email.split("@")[0] },
         },
       });
@@ -140,10 +140,11 @@ const Auth = () => {
 
   const googleSignIn = async () => {
     const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
+      redirect_uri: `${window.location.origin}${nextPath}`,
     });
     if (result.error) toast.error(result.error.message);
   };
+
 
   return (
     <div className="relative min-h-screen flex items-center justify-center p-4 bg-black overflow-hidden">
