@@ -1,0 +1,86 @@
+{
+  "version": 1,
+  "sdk_version": "0.22.0",
+  "path": "/functions/v1/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://rumkfzvloeazpvyomhww.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "sentify-mcp",
+      "version": "0.1.0",
+      "title": "Sentify"
+    },
+    "tools": [
+      {
+        "name": "search_music",
+        "title": "Search music",
+        "description": "Search Sentify's music catalog for songs, artists, or albums. Returns up to 20 matching tracks with title, artist, id, and duration.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "description": "Search query, e.g. 'Taylor Swift Blank Space'."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20,
+              "description": "Maximum number of results to return (default 10, max 20)."
+            }
+          },
+          "required": [
+            "query"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "whoami",
+        "title": "Who am I",
+        "description": "Return the identity (user id, email) of the signed-in Sentify user associated with this MCP session.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_my_sessions",
+        "title": "List my devices",
+        "description": "List the signed-in Sentify user's active listening devices/sessions (device label, platform, last active).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
