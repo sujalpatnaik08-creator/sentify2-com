@@ -12,3 +12,9 @@ verify_jwt = true
 
 [functions.analyze-track]
 verify_jwt = true
+
+# The MCP server validates OAuth bearer tokens itself (mcp-js resource server),
+# so Supabase's edge gateway must not 401 before the SDK's verifier runs.
+[functions.mcp]
+verify_jwt = false
+
