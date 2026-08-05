@@ -3,10 +3,10 @@
 // supabase function: mcp
 // Bundled from src/lib/mcp/index.ts by @lovable.dev/mcp-js.
 // src/lib/mcp/index.ts
-import { auth, defineMcp } from "npm:@lovable.dev/mcp-js@0.22.0";
+import { auth, defineMcp } from "npm:@lovable.dev/mcp-js@0.22.2";
 
 // src/lib/mcp/tools/search-music.ts
-import { defineTool } from "npm:@lovable.dev/mcp-js@0.22.0";
+import { defineTool } from "npm:@lovable.dev/mcp-js@0.22.2";
 import { z } from "npm:zod@^3.25.76";
 var search_music_default = defineTool({
   name: "search_music",
@@ -32,29 +32,29 @@ var search_music_default = defineTool({
     }
     const cap = limit ?? 10;
     try {
-      const res = await fetch(`${supabaseUrl}/functions/v1/yt-search`, {
-        method: "POST",
+      const url = new URL(`${supabaseUrl}/functions/v1/yt-search`);
+      url.searchParams.set("q", query);
+      url.searchParams.set("limit", String(cap));
+      url.searchParams.set("category", "music");
+      const res = await fetch(url.toString(), {
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${publishableKey}`,
           apikey: publishableKey
-        },
-        body: JSON.stringify({ query, limit: cap })
+        }
       });
       if (!res.ok) {
-        const body = await res.text();
         return {
-          content: [{ type: "text", text: `Search failed (${res.status}): ${body.slice(0, 300)}` }],
+          content: [{ type: "text", text: `Search failed with status ${res.status}.` }],
           isError: true
         };
       }
       const data = await res.json();
-      const rawResults = Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : [];
-      const results = rawResults.slice(0, cap).map((r) => ({
-        id: r.id ?? r.videoId ?? r.trackId ?? null,
-        title: r.title ?? r.name ?? "",
-        artist: r.artist ?? r.channel ?? r.author ?? "",
-        duration: r.duration ?? r.durationSeconds ?? null
+      const items = Array.isArray(data?.items) ? data.items : [];
+      const results = items.filter((r) => r?.type === "video").slice(0, cap).map((r) => ({
+        id: r.id,
+        title: r.title ?? "",
+        artist: r.artist ?? "",
+        durationSeconds: r.duration ?? null
       }));
       return {
         content: [{ type: "text", text: JSON.stringify(results, null, 2) }],
@@ -70,7 +70,7 @@ var search_music_default = defineTool({
 });
 
 // src/lib/mcp/tools/whoami.ts
-import { defineTool as defineTool2 } from "npm:@lovable.dev/mcp-js@0.22.0";
+import { defineTool as defineTool2 } from "npm:@lovable.dev/mcp-js@0.22.2";
 var whoami_default = defineTool2({
   name: "whoami",
   title: "Who am I",
@@ -102,7 +102,7 @@ var whoami_default = defineTool2({
 
 // src/lib/mcp/tools/list-sessions.ts
 import { createClient } from "npm:@supabase/supabase-js@^2.104.1";
-import { defineTool as defineTool3 } from "npm:@lovable.dev/mcp-js@0.22.0";
+import { defineTool as defineTool3 } from "npm:@lovable.dev/mcp-js@0.22.2";
 var list_sessions_default = defineTool3({
   name: "list_my_sessions",
   title: "List my devices",
@@ -155,5 +155,5 @@ var mcp_default = defineMcp({
 });
 
 // lovable-mcp-supabase-entry.ts
-import { createSupabaseHandler } from "npm:@lovable.dev/mcp-js@0.22.0/stacks/supabase";
+import { createSupabaseHandler } from "npm:@lovable.dev/mcp-js@0.22.2/stacks/supabase";
 Deno.serve(createSupabaseHandler(mcp_default, { functionName: "mcp" }));

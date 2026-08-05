@@ -37,30 +37,34 @@ export default defineTool({
 
     const cap = limit ?? 10;
     try {
-      const res = await fetch(`${supabaseUrl}/functions/v1/yt-search`, {
-        method: "POST",
+      const url = new URL(`${supabaseUrl}/functions/v1/yt-search`);
+      url.searchParams.set("q", query);
+      url.searchParams.set("limit", String(cap));
+      url.searchParams.set("category", "music");
+
+      const res = await fetch(url.toString(), {
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${publishableKey}`,
           apikey: publishableKey,
         },
-        body: JSON.stringify({ query, limit: cap }),
       });
       if (!res.ok) {
-        const body = await res.text();
         return {
-          content: [{ type: "text", text: `Search failed (${res.status}): ${body.slice(0, 300)}` }],
+          content: [{ type: "text", text: `Search failed with status ${res.status}.` }],
           isError: true,
         };
       }
       const data = await res.json();
-      const rawResults = Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : [];
-      const results = rawResults.slice(0, cap).map((r: any) => ({
-        id: r.id ?? r.videoId ?? r.trackId ?? null,
-        title: r.title ?? r.name ?? "",
-        artist: r.artist ?? r.channel ?? r.author ?? "",
-        duration: r.duration ?? r.durationSeconds ?? null,
-      }));
+      const items = Array.isArray(data?.items) ? data.items : [];
+      const results = items
+        .filter((r: any) => r?.type === "video")
+        .slice(0, cap)
+        .map((r: any) => ({
+          id: r.id,
+          title: r.title ?? "",
+          artist: r.artist ?? "",
+          durationSeconds: r.duration ?? null,
+        }));
       return {
         content: [{ type: "text", text: JSON.stringify(results, null, 2) }],
         structuredContent: { results },
@@ -71,5 +75,6 @@ export default defineTool({
         isError: true,
       };
     }
+
   },
 });
