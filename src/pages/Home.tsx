@@ -6,6 +6,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import heroHeadphones from "@/assets/hero-headphones.jpg";
+import heroWebp from "@/assets/hero-headphones.webp";
+import heroWebp960 from "@/assets/hero-headphones-960.webp";
+
 
 
 const HERO_SLIDES = [
@@ -57,20 +60,39 @@ const Home = () => {
         <meta property="og:description" content="Stream full-length songs ad-free. Discover music by mood with synced lyrics and smart queues on Sentify." />
         <meta property="og:url" content="/" />
         <meta property="og:type" content="website" />
+        {/* Preload the LCP hero image so it starts downloading with the HTML. */}
+        <link
+          rel="preload"
+          as="image"
+          href={heroWebp}
+          type="image/webp"
+          imageSrcSet={`${heroWebp960} 960w, ${heroWebp} 1920w`}
+          imageSizes="100vw"
+          fetchPriority="high"
+        />
       </Helmet>
       <div className="relative">
         {/* === HERO ============================================================ */}
       <section className="relative overflow-hidden h-[70vh] min-h-[480px] max-h-[760px]">
-        {/* Background image */}
-        <img
-          src={heroHeadphones}
-          alt="Studio headphones on a desk"
-          className="absolute inset-0 w-full h-full object-cover"
-          width={1920}
-          height={1088}
-          fetchPriority="high"
-          decoding="async"
-        />
+        {/* Background image — WebP with a JPEG fallback. Explicit dimensions and
+            fetchPriority="high" keep this as the eager LCP candidate. */}
+        <picture>
+          <source
+            type="image/webp"
+            srcSet={`${heroWebp960} 960w, ${heroWebp} 1920w`}
+            sizes="100vw"
+          />
+          <img
+            src={heroHeadphones}
+            alt="Studio headphones on a desk"
+            className="absolute inset-0 w-full h-full object-cover"
+            width={1920}
+            height={1080}
+            fetchPriority="high"
+            decoding="async"
+          />
+        </picture>
+
         {/* Dark gradient overlay for text legibility */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/55 to-background" />
         <div className="absolute inset-0 bg-gradient-to-r from-primary/15 via-transparent to-purple-500/15 mix-blend-overlay" />

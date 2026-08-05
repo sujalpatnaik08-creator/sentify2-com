@@ -1,6 +1,13 @@
+import { Suspense, lazy } from "react";
 import { MOODS, type Mood } from "@/types/music";
-import { MoodOrb } from "./MoodOrb";
 import { cn } from "@/lib/utils";
+
+// The orb pulls in three.js / @react-three (~1 MB). Load it only once the mood
+// grid is on screen so it never sits in the initial page load.
+const MoodOrb = lazy(() =>
+  import("./MoodOrb").then((m) => ({ default: m.MoodOrb })),
+);
+
 
 const MOOD_COLORS: Record<Mood, string> = {
   happy: "#fbbf24",
@@ -36,8 +43,11 @@ export const MoodFilter = ({ active, onSelect }: MoodFilterProps) => {
           >
             <div className="absolute inset-0 opacity-90" style={{ background: `var(--gradient-mood-${m.id})` }} />
             <div className="absolute inset-0">
-              <MoodOrb color={MOOD_COLORS[m.id]} isActive={isActive} />
+              <Suspense fallback={null}>
+                <MoodOrb color={MOOD_COLORS[m.id]} isActive={isActive} />
+              </Suspense>
             </div>
+
             <div className="absolute inset-0 flex flex-col items-center justify-end p-3 z-10">
               <span className="text-3xl mb-1 drop-shadow-lg">{m.emoji}</span>
               <span className="text-sm font-bold text-white drop-shadow-md">{m.label}</span>
