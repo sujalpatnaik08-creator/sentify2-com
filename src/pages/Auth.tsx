@@ -237,7 +237,10 @@ const Auth = () => {
             <div className="w-1/2 pr-3">
               {mode === "forgot" ? (
                 <form onSubmit={submitEmail} className="space-y-3">
+                  <label htmlFor="forgot-email" className="block text-xs font-bold text-white">Email</label>
                   <Input
+                    id="forgot-email"
+                    aria-label="Email"
                     type="email" required value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="Email"
@@ -249,16 +252,20 @@ const Auth = () => {
                 </form>
               ) : method === "email" ? (
                 <form onSubmit={submitEmail} className="space-y-3">
-                  <label className="block text-xs font-bold text-white">Email</label>
+                  <label htmlFor="signin-email" className="block text-xs font-bold text-white">Email</label>
                   <Input
+                    id="signin-email"
+                    aria-label="Email"
                     type="email" required value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="name@domain.com"
                     className="h-12 rounded-md bg-neutral-900 border-neutral-700 text-white placeholder:text-neutral-500 focus-visible:ring-[#1DB954]/40"
                     autoComplete="email"
                   />
-                  <label className="block text-xs font-bold text-white pt-1">Password</label>
+                  <label htmlFor="signin-password" className="block text-xs font-bold text-white pt-1">Password</label>
                   <Input
+                    id="signin-password"
+                    aria-label="Password"
                     type="password" required minLength={6} value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Password"
@@ -280,8 +287,10 @@ const Auth = () => {
                 </form>
               ) : (
                 <form onSubmit={otpSent ? verifyPhoneOtp : sendPhoneOtp} className="space-y-3">
-                  <label className="block text-xs font-bold text-white">Phone (E.164)</label>
+                  <label htmlFor="signin-phone" className="block text-xs font-bold text-white">Phone (E.164)</label>
                   <Input
+                    id="signin-phone"
+                    aria-label="Phone number"
                     type="tel" required value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     disabled={otpSent}
@@ -290,8 +299,10 @@ const Auth = () => {
                   />
                   {otpSent && (
                     <>
-                      <label className="block text-xs font-bold text-white pt-1">Verification code</label>
+                      <label htmlFor="signin-otp" className="block text-xs font-bold text-white pt-1">Verification code</label>
                       <Input
+                        id="signin-otp"
+                        aria-label="Verification code"
                         inputMode="numeric" required value={otp}
                         onChange={(e) => setOtp(e.target.value)}
                         placeholder="6-digit code"
@@ -317,16 +328,20 @@ const Auth = () => {
             <div className="w-1/2 pl-3">
               {method === "email" ? (
                 <form onSubmit={submitEmail} className="space-y-3">
-                  <label className="block text-xs font-bold text-white">Email</label>
+                  <label htmlFor="signup-email" className="block text-xs font-bold text-white">Email</label>
                   <Input
+                    id="signup-email"
+                    aria-label="Email"
                     type="email" required value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="name@domain.com"
                     className="h-12 rounded-md bg-neutral-900 border-neutral-700 text-white placeholder:text-neutral-500 focus-visible:ring-[#1DB954]/40"
                     autoComplete="email"
                   />
-                  <label className="block text-xs font-bold text-white pt-1">Password</label>
+                  <label htmlFor="signup-password" className="block text-xs font-bold text-white pt-1">Password</label>
                   <Input
+                    id="signup-password"
+                    aria-label="Password"
                     type="password" required minLength={6} value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Create a password (6+ chars)"
@@ -339,8 +354,10 @@ const Auth = () => {
                 </form>
               ) : (
                 <form onSubmit={otpSent ? verifyPhoneOtp : sendPhoneOtp} className="space-y-3">
-                  <label className="block text-xs font-bold text-white">Phone (E.164)</label>
+                  <label htmlFor="signup-phone" className="block text-xs font-bold text-white">Phone (E.164)</label>
                   <Input
+                    id="signup-phone"
+                    aria-label="Phone number"
                     type="tel" required value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     disabled={otpSent}
@@ -349,6 +366,8 @@ const Auth = () => {
                   />
                   {otpSent && (
                     <Input
+                      id="signup-otp"
+                      aria-label="Verification code"
                       inputMode="numeric" required value={otp}
                       onChange={(e) => setOtp(e.target.value)}
                       placeholder="6-digit code"

@@ -62,8 +62,10 @@ const ResetPassword = () => {
           <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
         ) : (
           <form onSubmit={submit} className="space-y-3">
-            <Input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="New password" className="h-11 rounded-xl" autoComplete="new-password" />
-            <Input type="password" required minLength={6} value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Confirm new password" className="h-11 rounded-xl" autoComplete="new-password" />
+            <label htmlFor="new-password" className="block text-xs font-medium">New password</label>
+            <Input id="new-password" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="New password" className="h-11 rounded-xl" autoComplete="new-password" />
+            <label htmlFor="confirm-password" className="block text-xs font-medium">Confirm new password</label>
+            <Input id="confirm-password" type="password" required minLength={6} value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Confirm new password" className="h-11 rounded-xl" autoComplete="new-password" />
             <Button type="submit" disabled={busy} className="w-full h-11 font-medium rounded-xl">
               {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Update password"}
             </Button>
