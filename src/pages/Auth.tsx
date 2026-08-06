@@ -301,8 +301,8 @@ const Auth = () => {
                     <>
                       <label htmlFor="signin-otp" className="block text-xs font-bold text-white pt-1">Verification code</label>
                       <Input
-                    id="signin-otp"
-                    aria-label="Verification code"
+                        id="signin-otp"
+                        aria-label="Verification code"
                         inputMode="numeric" required value={otp}
                         onChange={(e) => setOtp(e.target.value)}
                         placeholder="6-digit code"
