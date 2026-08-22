@@ -440,19 +440,27 @@ const Search = () => {
   // ---- Renderers ----
 
   const renderTracksTable = (list: Track[]) => (
-    <div className="relative overflow-x-auto rounded-2xl border border-primary/30 bg-card/40 backdrop-blur-sm shadow-[0_0_24px_-6px_hsl(var(--primary)/0.45),0_0_60px_-20px_hsl(var(--primary)/0.35)] transition-all">
+    <div className="relative w-full overflow-x-hidden rounded-2xl border border-primary/30 bg-card/40 backdrop-blur-sm shadow-[0_0_24px_-6px_hsl(var(--primary)/0.45),0_0_60px_-20px_hsl(var(--primary)/0.35)] transition-all">
 
-      <table className="w-full text-sm">
+      <table className="w-full table-fixed text-sm">
+        <colgroup>
+          <col className="w-12" />
+          <col />
+          <col className="hidden lg:table-column w-[92px]" />
+          <col className="w-10" />
+          <col className="w-[130px]" />
+          <col className="w-[84px]" />
+          <col className="w-[68px]" />
+        </colgroup>
         <thead>
           <tr className="text-muted-foreground border-b border-border/50 text-left">
-            <th className="font-normal py-3 pl-3 pr-2 w-12">#</th>
+            <th className="font-normal py-3 pl-4 pr-2">#</th>
             <th className="font-normal py-3 px-2">Title</th>
-            <th className="font-normal py-3 px-2 hidden md:table-cell sr-only">Artist</th>
-            <th className="font-normal py-3 px-2 hidden lg:table-cell w-24">Language</th>
-            <th className="font-normal py-3 px-2 w-12"></th>
-            <th className="font-normal py-3 px-2 w-32">Download</th>
-            <th className="font-normal py-3 px-2 w-12"></th>
-            <th className="font-normal py-3 px-3 w-16 text-right"><Clock className="w-4 h-4 inline" /></th>
+            <th className="font-normal py-3 px-2 hidden lg:table-cell">Language</th>
+            <th className="font-normal py-3 px-1"></th>
+            <th className="font-normal py-3 px-2">Download</th>
+            <th className="font-normal py-3 px-2">Lyrics</th>
+            <th className="font-normal py-3 pr-4 pl-2 text-right"><Clock className="w-4 h-4 inline" /></th>
           </tr>
         </thead>
         <tbody>
@@ -477,7 +485,7 @@ const Search = () => {
                     isCursor && "ring-1 ring-primary/40 bg-primary/5",
                   )}
                 >
-                  <td className="py-2 pl-3 pr-2 text-muted-foreground">
+                  <td className="py-4 pl-4 pr-2 text-muted-foreground">
                     <div className="relative w-6 h-6 flex items-center justify-center">
                       <span className={cn("group-hover:hidden", isCurrent && "hidden")}>{i + 1}</span>
                       <button
@@ -494,26 +502,25 @@ const Search = () => {
                       </button>
                     </div>
                   </td>
-                  <td className="py-3 px-2">
+                  <td className="py-4 px-2">
                     <div className="flex items-center gap-4 min-w-0">
                       <img
                         src={t.artwork}
                         alt={t.title}
-                        className="w-14 h-14 rounded-md object-cover shrink-0 shadow"
+                        className="w-16 h-16 rounded-md object-cover shrink-0 shadow"
                         onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")}
                       />
-                      <div className="min-w-0">
-                        <div className={cn("truncate text-lg font-semibold", isCurrent && "text-primary")}>{t.title}</div>
+                      <div className="min-w-0 flex-1">
+                        <div className={cn("truncate text-base md:text-lg font-semibold", isCurrent && "text-primary")}>{t.title}</div>
                       </div>
                     </div>
                   </td>
-                  <td className="py-2 px-2 hidden"></td>
-                  <td className="py-2 px-2 hidden lg:table-cell">
+                  <td className="py-4 px-2 hidden lg:table-cell">
                     <span className={cn("inline-flex items-center px-2 py-0.5 rounded-full border text-[10px] font-medium", LANG_COLORS[lang])}>
                       {LANG_LABEL[lang]}
                     </span>
                   </td>
-                  <td className="py-2 px-2">
+                  <td className="py-4 px-1">
                     <button
                       onClick={() => toggleLike(t.id)}
                       className={cn(
@@ -525,9 +532,9 @@ const Search = () => {
                       <Heart className={cn("w-4 h-4", isLikedT && "fill-current")} />
                     </button>
                   </td>
-                  <td className="py-2 px-2">
+                  <td className="py-4 px-2">
                     {isDownloadingNow ? (
-                      <div className="flex items-center gap-2 min-w-[110px]">
+                      <div className="flex items-center gap-1.5">
                         <Progress value={progress[t.id] ?? 0} className="h-1.5 flex-1" />
                         <span className="text-[10px] tabular-nums text-muted-foreground w-8 text-right">
                           {progress[t.id] ?? 0}%
@@ -569,12 +576,12 @@ const Search = () => {
                         title={t.source === "youtube" ? "YouTube tracks are stream-only" : "Save offline"}
                         disabled={t.source === "youtube"}
                       >
-                        <Download className="w-4 h-4" />
+                        <Download className="w-4 h-4 shrink-0" />
                         <span className="text-[11px] font-medium hidden sm:inline">Download</span>
                       </button>
                     )}
                   </td>
-                  <td className="py-2 px-2">
+                  <td className="py-4 px-2">
                     <button
                       onClick={() => toggleTrackLyrics(t)}
                       className={cn(
@@ -588,11 +595,11 @@ const Search = () => {
                       <span className="text-[11px] font-medium hidden sm:inline">{isExpanded ? "Hide" : "Lyrics"}</span>
                     </button>
                   </td>
-                  <td className="py-2 px-3 text-right text-muted-foreground tabular-nums">{fmt(t.duration)}</td>
+                  <td className="py-4 pr-4 pl-2 text-right text-muted-foreground tabular-nums whitespace-nowrap">{fmt(t.duration)}</td>
                 </tr>
                 {isExpanded && (
                   <tr className="bg-card/30 border-b border-border/30">
-                    <td colSpan={8} className="px-6 py-4">
+                    <td colSpan={7} className="px-6 py-4">
                       <LyricsRow
                         state={lyricsState?.state ?? "loading"}
                         text={lyricsState?.text}
