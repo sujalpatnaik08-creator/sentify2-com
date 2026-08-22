@@ -497,10 +497,12 @@ const SectionPanel = ({
             description="Light 6 AM–6 PM, Dark 6 PM–6 AM"
             control={<Switch checked={autoTheme} onCheckedChange={setAutoTheme} />}
           />
+          <ZoomLevelField />
           <p className="text-xs text-muted-foreground pt-3">
             Languages for music are configured per-track in the Now Playing lyrics view.
           </p>
         </div>
+
       );
 
     case "privacy":
