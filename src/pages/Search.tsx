@@ -443,24 +443,15 @@ const Search = () => {
     <div className="relative w-full overflow-x-hidden rounded-2xl border border-primary/30 bg-card/40 backdrop-blur-sm shadow-[0_0_24px_-6px_hsl(var(--primary)/0.45),0_0_60px_-20px_hsl(var(--primary)/0.35)] transition-all">
 
       <table className="w-full table-fixed text-sm">
-        <colgroup>
-          <col className="w-12" />
-          <col />
-          <col className="hidden lg:table-column w-[92px]" />
-          <col className="w-10" />
-          <col className="w-[130px]" />
-          <col className="w-[84px]" />
-          <col className="w-[68px]" />
-        </colgroup>
         <thead>
           <tr className="text-muted-foreground border-b border-border/50 text-left">
-            <th className="font-normal py-3 pl-4 pr-2">#</th>
+            <th className="font-normal py-3 pl-4 pr-2 w-12">#</th>
             <th className="font-normal py-3 px-2">Title</th>
-            <th className="font-normal py-3 px-2 hidden lg:table-cell">Language</th>
-            <th className="font-normal py-3 px-1"></th>
-            <th className="font-normal py-3 px-2">Download</th>
-            <th className="font-normal py-3 px-2">Lyrics</th>
-            <th className="font-normal py-3 pr-4 pl-2 text-right"><Clock className="w-4 h-4 inline" /></th>
+            <th className="font-normal py-3 px-2 hidden lg:table-cell w-[92px]">Language</th>
+            <th className="font-normal py-3 px-1 w-10"></th>
+            <th className="font-normal py-3 px-2 w-[130px]">Download</th>
+            <th className="font-normal py-3 px-2 w-[84px]">Lyrics</th>
+            <th className="font-normal py-3 pr-4 pl-2 w-[68px] text-right"><Clock className="w-4 h-4 inline" /></th>
           </tr>
         </thead>
         <tbody>
