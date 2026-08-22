@@ -59,7 +59,16 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { usePlayer } from "@/contexts/PlayerContext";
-import { getPerfMode, setPerfMode, getTasteProfileEnabled, setTasteProfileEnabled } from "@/lib/user-prefs";
+import {
+  getPerfMode,
+  setPerfMode,
+  getTasteProfileEnabled,
+  setTasteProfileEnabled,
+  getZoomLevel,
+  setZoomLevel,
+  ZOOM_LEVELS,
+  DEFAULT_ZOOM,
+} from "@/lib/user-prefs";
 import { SessionsPanel } from "@/components/SessionsPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -86,7 +95,7 @@ interface RowDef {
 
 const ROWS: RowDef[] = [
   { id: "account", icon: CircleUserRound, title: "Account", subtitle: "Username · Close account" },
-  { id: "content", icon: Music2, title: "Content and display", subtitle: "Canvas · Languages for music" },
+  { id: "content", icon: Music2, title: "Content and display", subtitle: "Zoom level · Theme · Languages" },
   { id: "privacy", icon: Lock, title: "Privacy and social", subtitle: "Private session · Public playlists" },
   { id: "playback", icon: Volume2, title: "Playback", subtitle: "Gapless playback · Autoplay" },
   { id: "notifications", icon: Bell, title: "Notifications", subtitle: "Push · Email" },
@@ -764,3 +773,111 @@ const SectionPanel = ({
 
 // suppress unused-import warning when bundler is strict
 void cn;
+
+// ---------------------------------------------------------------------------
+// Zoom level — Dense (70%) .. Default (100%) .. Spacious (130%)
+// ---------------------------------------------------------------------------
+
+const ZOOM_PREVIEWS: { label: string; pct: number; rows: number[] }[] = [
+  { label: "Dense", pct: 70, rows: [4, 4, 4, 4] },
+  { label: "Default", pct: 100, rows: [3, 3, 3] },
+  { label: "Spacious", pct: 130, rows: [2, 2] },
+];
+
+const ZoomPreview = ({
+  rows,
+  active,
+  onClick,
+  label,
+}: { rows: number[]; active: boolean; onClick: () => void; label: string }) => (
+  <button
+    onClick={onClick}
+    aria-label={`${label} zoom`}
+    className="flex flex-col items-center gap-2 group"
+  >
+    <div
+      className={cn(
+        "w-[72px] h-[52px] rounded-sm border-2 p-1 flex flex-col gap-1 transition-colors",
+        active ? "border-primary" : "border-muted-foreground/50 group-hover:border-foreground",
+      )}
+    >
+      {rows.map((cols, r) => (
+        <div key={r} className="flex-1 flex gap-1">
+          {Array.from({ length: cols }).map((_, c) => (
+            <div
+              key={c}
+              className={cn("flex-1 rounded-[1px]", active ? "bg-primary" : "bg-muted-foreground/60")}
+            />
+          ))}
+        </div>
+      ))}
+    </div>
+    <span className="text-xs font-medium">{label}</span>
+  </button>
+);
+
+const ZoomLevelField = () => {
+  const [zoom, setZoom] = useState<number>(() => getZoomLevel());
+
+  const pick = (pct: number) => {
+    setZoom(pct);
+    setZoomLevel(pct);
+  };
+
+  return (
+    <div className="py-4 border-b border-border/40">
+      <Label className="text-sm font-medium">Zoom level</Label>
+      <p className="text-[11px] text-muted-foreground mt-1 mb-4">
+        Adjusting the zoom level helps you adapt Sentify to your preferences. You can also press
+        {" "}<kbd className="px-1 py-0.5 rounded bg-muted text-[10px]">Ctrl</kbd>{" "}
+        <kbd className="px-1 py-0.5 rounded bg-muted text-[10px]">-</kbd> or{" "}
+        <kbd className="px-1 py-0.5 rounded bg-muted text-[10px]">Ctrl</kbd>{" "}
+        <kbd className="px-1 py-0.5 rounded bg-muted text-[10px]">+</kbd>.
+      </p>
+
+      <div className="rounded-xl bg-card/60 p-4">
+        <div className="flex items-start justify-between mb-4">
+          {ZOOM_PREVIEWS.map((p) => (
+            <ZoomPreview
+              key={p.label}
+              rows={p.rows}
+              label={p.label}
+              active={zoom === p.pct}
+              onClick={() => pick(p.pct)}
+            />
+          ))}
+        </div>
+
+        <div className="relative flex items-start justify-between">
+          <div className="absolute left-2 right-2 top-[7px] h-px bg-border" />
+          {ZOOM_LEVELS.map((lvl) => (
+            <button
+              key={lvl}
+              onClick={() => pick(lvl)}
+              aria-label={`${lvl} percent`}
+              className="relative flex flex-col items-center gap-1.5"
+            >
+              <span
+                className={cn(
+                  "w-3.5 h-3.5 rounded-full border-2 transition-colors",
+                  zoom === lvl
+                    ? "border-primary bg-primary shadow-[0_0_0_3px_hsl(var(--background))]"
+                    : "border-muted-foreground/60 bg-background hover:border-foreground",
+                )}
+              />
+              <span className={cn("text-[10px] tabular-nums", zoom === lvl ? "text-foreground font-semibold" : "text-muted-foreground")}>
+                {lvl}%
+              </span>
+            </button>
+          ))}
+        </div>
+
+        <div className="flex justify-end mt-4">
+          <Button variant="outline" size="sm" className="rounded-full" onClick={() => pick(DEFAULT_ZOOM)}>
+            Reset
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
