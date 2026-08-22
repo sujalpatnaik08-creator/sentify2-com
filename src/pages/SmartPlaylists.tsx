@@ -2,10 +2,7 @@
 // BPM range, and an explicit-free filter. Powered by the musicologist cache.
 
 import { useEffect, useMemo, useState } from "react";
-import { Helmet } from "react-helmet-async";
-import { Navigate } from "react-router-dom";
-import { Sparkles, Loader2 } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
+import { Loader2 } from "lucide-react";
 import { listAnalyses, listUploads } from "@/lib/analysis-store";
 import type { AnalysisResult, LocalUpload } from "@/types/analysis";
 import { MOODS } from "@/types/music";
@@ -23,8 +20,7 @@ const BPM_RANGES = [
   { min: 130, max: 220, label: "Fast (130+)" },
 ];
 
-const SmartPlaylists = () => {
-  const { session, loading } = useAuth();
+export const SmartPlaylistsPanel = () => {
   const [analyses, setAnalyses] = useState<AnalysisResult[]>([]);
   const [uploads, setUploads] = useState<LocalUpload[]>([]);
   const [loadingData, setLoadingData] = useState(true);
@@ -67,9 +63,6 @@ const SmartPlaylists = () => {
     });
   }, [analyses, filter]);
 
-  if (loading) return null;
-  if (!session) return <Navigate to="/auth" replace />;
-
   const playOne = (a: AnalysisResult) => {
     const upload = uploadById.get(a.trackId);
     if (!upload) return;
@@ -87,24 +80,10 @@ const SmartPlaylists = () => {
   };
 
   return (
-    <>
-      <Helmet>
-        <title>Smart Playlists — Sentify Musicologist</title>
-        <meta name="description" content="Auto-generated playlists built from genre, BPM, key, mood, and explicit-content tags." />
-        <link rel="canonical" href="/smart-playlists" />
-        <meta property="og:title" content="Smart Playlists — Sentify Musicologist" />
-        <meta property="og:description" content="Auto-generated playlists built from genre, BPM, key, mood, and explicit-content tags." />
-        <meta property="og:url" content="/smart-playlists" />
-      </Helmet>
-
-      <div className="px-6 md:px-10 py-8 max-w-7xl mx-auto">
-        <div className="flex items-center gap-2 mb-1">
-          <Sparkles className="w-7 h-7 text-primary" />
-          <h1 className="text-3xl md:text-4xl font-black">Smart Playlists</h1>
-        </div>
-        <p className="text-muted-foreground mb-6">
-          Auto-grouped from the musicologist's analysis of your library and uploads.
-        </p>
+    <div>
+      <p className="text-muted-foreground mb-6">
+        Auto-grouped from the musicologist's analysis of your library and uploads.
+      </p>
 
         {loadingData ? (
           <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" />Loading…</div>
@@ -183,8 +162,7 @@ const SmartPlaylists = () => {
             </section>
           </>
         )}
-      </div>
-    </>
+    </div>
   );
 };
 
@@ -206,4 +184,4 @@ const Chip = ({ children, active, onClick }: { children: React.ReactNode; active
   </button>
 );
 
-export default SmartPlaylists;
+export default SmartPlaylistsPanel;
