@@ -195,3 +195,33 @@ const YT_ID_RE = /^[A-Za-z0-9_-]{11}$/;
 export function isValidYouTubeId(id: string): boolean {
   return YT_ID_RE.test(id);
 }
+
+// ---------- App zoom level (Spotify-style Dense .. Spacious) ----------
+
+const K_ZOOM = "sentify_zoom_level";
+export const ZOOM_LEVELS = [70, 80, 90, 100, 110, 120, 130] as const;
+export const DEFAULT_ZOOM = 100;
+
+export function getZoomLevel(): number {
+  try {
+    const v = parseInt(localStorage.getItem(K_ZOOM) || "", 10);
+    if ((ZOOM_LEVELS as readonly number[]).includes(v)) return v;
+  } catch { /* */ }
+  return DEFAULT_ZOOM;
+}
+
+/** Applies the zoom by scaling the root font size (safe for layout + fixed bars). */
+export function applyZoomLevel(pct: number) {
+  try {
+    const root = document.documentElement;
+    root.style.fontSize = `${(16 * pct) / 100}px`;
+    root.style.setProperty("--app-zoom", String(pct / 100));
+  } catch { /* */ }
+}
+
+export function setZoomLevel(pct: number) {
+  const v = (ZOOM_LEVELS as readonly number[]).includes(pct) ? pct : DEFAULT_ZOOM;
+  try { localStorage.setItem(K_ZOOM, String(v)); } catch { /* */ }
+  applyZoomLevel(v);
+  window.dispatchEvent(new CustomEvent("sentify:zoom-level", { detail: v }));
+}

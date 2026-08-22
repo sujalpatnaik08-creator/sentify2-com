@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Suspense, lazy } from "react";
 import { Loader2 } from "lucide-react";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -26,7 +26,6 @@ const Artist = lazy(() => import("./pages/Artist.tsx"));
 const History = lazy(() => import("./pages/History.tsx"));
 const Moods = lazy(() => import("./pages/Moods.tsx"));
 const Upload = lazy(() => import("./pages/Upload.tsx"));
-const SmartPlaylists = lazy(() => import("./pages/SmartPlaylists.tsx"));
 const GuideOfflineListening = lazy(() => import("./pages/GuideOfflineListening.tsx"));
 const OAuthConsent = lazy(() => import("./pages/OAuthConsent.tsx"));
 
@@ -75,7 +74,8 @@ const App = () => (
                   <Route path="/history" element={<Protected><History /></Protected>} />
                   <Route path="/library" element={<Protected><Library /></Protected>} />
                   <Route path="/upload" element={<Protected><Upload /></Protected>} />
-                  <Route path="/smart-playlists" element={<Protected><SmartPlaylists /></Protected>} />
+                  {/* Smart Playlists merged into /moods */}
+                  <Route path="/smart-playlists" element={<Navigate to="/moods" replace />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </Suspense>

@@ -13,7 +13,6 @@ import {
   Download,
   Sparkles,
   UploadCloud,
-  Wand2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -24,8 +23,7 @@ type Item = { to: string; icon: typeof Music; label: string };
 const main: Item[] = [
   { to: "/", icon: Home, label: "Home" },
   { to: "/search", icon: Search, label: "Search" },
-  { to: "/moods", icon: Sparkles, label: "Moods" },
-  { to: "/smart-playlists", icon: Wand2, label: "Smart Playlists" },
+  { to: "/moods", icon: Sparkles, label: "Moods & Playlists" },
   { to: "/upload", icon: UploadCloud, label: "Upload" },
   { to: "/library", icon: Library, label: "Your Library" },
   { to: "/downloads", icon: Download, label: "Downloads" },
