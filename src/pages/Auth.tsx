@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Loader2, Music2, Mail, Phone, ArrowLeft } from "lucide-react";
 import { lovable } from "@/integrations/lovable";
 import { cn } from "@/lib/utils";
+import { COUNTRIES, guessCountry, toE164 } from "@/lib/country-codes";
 
 // Only allow same-origin relative paths as the post-auth redirect target.
 function safeNext(next: string | null): string {
@@ -30,6 +31,9 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [phone, setPhone] = useState("");
+  const [country, setCountry] = useState<string>(() => guessCountry());
+  const dial = COUNTRIES.find((c) => c.iso === country)?.dial ?? "1";
+  const fullPhone = toE164(dial, phone);
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -84,9 +88,9 @@ const Auth = () => {
 
   const sendPhoneOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    const p = phone.trim();
-    if (!/^\+\d{6,15}$/.test(p)) {
-      return toast.error("Enter your phone in E.164 format, e.g. +15558675309");
+    const p = fullPhone;
+    if (!/^\+\d{7,15}$/.test(p)) {
+      return toast.error("Enter a valid mobile number for the selected country.");
     }
     setBusy(true);
     const { error } = await supabase.auth.signInWithOtp({ phone: p });
@@ -114,22 +118,22 @@ const Auth = () => {
       } else if (code.includes("over_email_send_rate_limit") || code.includes("over_sms_send_rate_limit") || msg.includes("rate limit")) {
         toast.error("Too many code requests. Wait a minute before trying again.");
       } else if (msg.includes("invalid") && msg.includes("phone")) {
-        toast.error("That phone number isn't valid. Use E.164 format, e.g. +15558675309.");
+        toast.error("That phone number isn't valid for the selected country.");
       } else {
         toast.error(error.message || "Couldn't send the code. Please try again.");
       }
       return;
     }
     setOtpSent(true);
-    toast.success("OTP sent. Check your texts.");
+    toast.success(`Code sent to ${fullPhone}. Check your texts.`);
   };
 
   const verifyPhoneOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (otp.trim().length < 4) return toast.error("Enter the code we sent.");
+    if (!/^\d{4,8}$/.test(otp.trim())) return toast.error("Enter the code we sent.");
     setBusy(true);
     const { error } = await supabase.auth.verifyOtp({
-      phone: phone.trim(),
+      phone: fullPhone,
       token: otp.trim(),
       type: "sms",
     });
@@ -287,16 +291,29 @@ const Auth = () => {
                 </form>
               ) : (
                 <form onSubmit={otpSent ? verifyPhoneOtp : sendPhoneOtp} className="space-y-3">
-                  <label htmlFor="signin-phone" className="block text-xs font-bold text-white">Phone (E.164)</label>
-                  <Input
-                    id="signin-phone"
-                    aria-label="Phone number"
-                    type="tel" required value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    disabled={otpSent}
-                    placeholder="+15558675309"
-                    className="h-12 rounded-md bg-neutral-900 border-neutral-700 text-white placeholder:text-neutral-500 focus-visible:ring-[#1DB954]/40"
-                  />
+                  <label htmlFor="signin-phone" className="block text-xs font-bold text-white">Mobile number</label>
+                  <div className="flex gap-2">
+                    <select
+                      aria-label="Country code"
+                      value={country}
+                      disabled={otpSent}
+                      onChange={(e) => setCountry(e.target.value)}
+                      className="h-12 w-32 shrink-0 rounded-md bg-neutral-900 border border-neutral-700 text-white text-sm px-2 focus:outline-none focus:ring-2 focus:ring-[#1DB954]/40"
+                    >
+                      {COUNTRIES.map((c) => (
+                        <option key={c.iso} value={c.iso}>{c.flag} +{c.dial} {c.name}</option>
+                      ))}
+                    </select>
+                    <Input
+                      id="signin-phone"
+                      aria-label="Phone number"
+                      type="tel" inputMode="tel" required value={phone}
+                      onChange={(e) => setPhone(e.target.value.replace(/[^\d\s-]/g, ""))}
+                      disabled={otpSent}
+                      placeholder="Mobile number"
+                      className="h-12 rounded-md bg-neutral-900 border-neutral-700 text-white placeholder:text-neutral-500 focus-visible:ring-[#1DB954]/40"
+                    />
+                  </div>
                   {otpSent && (
                     <>
                       <label htmlFor="signin-otp" className="block text-xs font-bold text-white pt-1">Verification code</label>
@@ -305,7 +322,7 @@ const Auth = () => {
                         aria-label="Verification code"
                         inputMode="numeric" required value={otp}
                         onChange={(e) => setOtp(e.target.value)}
-                        placeholder="6-digit code"
+                        placeholder="Enter code" maxLength={8}
                         className="h-12 rounded-md bg-neutral-900 border-neutral-700 text-white placeholder:text-neutral-500 focus-visible:ring-[#1DB954]/40 tracking-[0.5em] text-center"
                       />
                       <button
@@ -354,23 +371,36 @@ const Auth = () => {
                 </form>
               ) : (
                 <form onSubmit={otpSent ? verifyPhoneOtp : sendPhoneOtp} className="space-y-3">
-                  <label htmlFor="signup-phone" className="block text-xs font-bold text-white">Phone (E.164)</label>
-                  <Input
-                    id="signup-phone"
-                    aria-label="Phone number"
-                    type="tel" required value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    disabled={otpSent}
-                    placeholder="+15558675309"
-                    className="h-12 rounded-md bg-neutral-900 border-neutral-700 text-white placeholder:text-neutral-500 focus-visible:ring-[#1DB954]/40"
-                  />
+                  <label htmlFor="signup-phone" className="block text-xs font-bold text-white">Mobile number</label>
+                  <div className="flex gap-2">
+                    <select
+                      aria-label="Country code"
+                      value={country}
+                      disabled={otpSent}
+                      onChange={(e) => setCountry(e.target.value)}
+                      className="h-12 w-32 shrink-0 rounded-md bg-neutral-900 border border-neutral-700 text-white text-sm px-2 focus:outline-none focus:ring-2 focus:ring-[#1DB954]/40"
+                    >
+                      {COUNTRIES.map((c) => (
+                        <option key={c.iso} value={c.iso}>{c.flag} +{c.dial} {c.name}</option>
+                      ))}
+                    </select>
+                    <Input
+                      id="signup-phone"
+                      aria-label="Phone number"
+                      type="tel" inputMode="tel" required value={phone}
+                      onChange={(e) => setPhone(e.target.value.replace(/[^\d\s-]/g, ""))}
+                      disabled={otpSent}
+                      placeholder="Mobile number"
+                      className="h-12 rounded-md bg-neutral-900 border-neutral-700 text-white placeholder:text-neutral-500 focus-visible:ring-[#1DB954]/40"
+                    />
+                  </div>
                   {otpSent && (
                     <Input
                       id="signup-otp"
                       aria-label="Verification code"
                       inputMode="numeric" required value={otp}
                       onChange={(e) => setOtp(e.target.value)}
-                      placeholder="6-digit code"
+                      placeholder="Enter code" maxLength={8}
                       className="h-12 rounded-md bg-neutral-900 border-neutral-700 text-white placeholder:text-neutral-500 focus-visible:ring-[#1DB954]/40 tracking-[0.5em] text-center"
                     />
                   )}
