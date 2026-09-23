@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Loader2, Music2, Mail, Phone, ArrowLeft } from "lucide-react";
 import { lovable } from "@/integrations/lovable";
 import { cn } from "@/lib/utils";
+import CountryPicker from "@/components/CountryPicker";
 import { COUNTRIES, guessCountry, toE164 } from "@/lib/country-codes";
 
 // Only allow same-origin relative paths as the post-auth redirect target.
@@ -293,17 +294,7 @@ const Auth = () => {
                 <form onSubmit={otpSent ? verifyPhoneOtp : sendPhoneOtp} className="space-y-3">
                   <label htmlFor="signin-phone" className="block text-xs font-bold text-white">Mobile number</label>
                   <div className="flex gap-2">
-                    <select
-                      aria-label="Country code"
-                      value={country}
-                      disabled={otpSent}
-                      onChange={(e) => setCountry(e.target.value)}
-                      className="h-12 w-32 shrink-0 rounded-md bg-neutral-900 border border-neutral-700 text-white text-sm px-2 focus:outline-none focus:ring-2 focus:ring-[#1DB954]/40"
-                    >
-                      {COUNTRIES.map((c) => (
-                        <option key={c.iso} value={c.iso}>{c.flag} +{c.dial} {c.name}</option>
-                      ))}
-                    </select>
+                    <CountryPicker value={country} onChange={setCountry} disabled={otpSent} />
                     <Input
                       id="signin-phone"
                       aria-label="Phone number"
@@ -373,17 +364,7 @@ const Auth = () => {
                 <form onSubmit={otpSent ? verifyPhoneOtp : sendPhoneOtp} className="space-y-3">
                   <label htmlFor="signup-phone" className="block text-xs font-bold text-white">Mobile number</label>
                   <div className="flex gap-2">
-                    <select
-                      aria-label="Country code"
-                      value={country}
-                      disabled={otpSent}
-                      onChange={(e) => setCountry(e.target.value)}
-                      className="h-12 w-32 shrink-0 rounded-md bg-neutral-900 border border-neutral-700 text-white text-sm px-2 focus:outline-none focus:ring-2 focus:ring-[#1DB954]/40"
-                    >
-                      {COUNTRIES.map((c) => (
-                        <option key={c.iso} value={c.iso}>{c.flag} +{c.dial} {c.name}</option>
-                      ))}
-                    </select>
+                    <CountryPicker value={country} onChange={setCountry} disabled={otpSent} />
                     <Input
                       id="signup-phone"
                       aria-label="Phone number"
